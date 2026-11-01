@@ -1,0 +1,8 @@
+@import "tailwindcss";
+@import "./components.css";
+@source "../../templates";
+@source "../js";
+
+@theme {
+  --font-sans: "DM Sans", system-ui, sans-serif;
+}

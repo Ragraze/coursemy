@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block title %}{{ course.title }} · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="detail-back"><a href="/courses" class="inline-link">{{ icon('back', 16) }}Back to courses</a></div>
+{% if error %}<p class="notice" role="alert">{{ error }} The coupon could not be verified. <a href="{{ request.url.path }}">Try again</a>.</p>{% endif %}
+<div class="detail-layout">
+  <article class="detail-main min-w-0">
+    <p class="course-category">{{ course.category }}</p>
+    <h1>{{ course.title }}</h1>
+    <p class="detail-instructor muted">By {{ course.instructor or 'Instructor unavailable' }}</p>
+    <div class="detail-metadata flex flex-wrap items-center gap-4">
+      <span class="flex items-center gap-1">{{ icon('star', 16) }}{{ '%.1f'|format(course.rate) if course.rate else 'Not rated' }}</span>
+      {% if course.total_hour is not none %}<span class="flex items-center gap-1">{{ icon('clock', 16) }}{{ '%g'|format(course.total_hour) }} hr</span>{% endif %}
+      <span class="flex items-center gap-1">{{ icon('globe', 16) }}{{ course.language or 'Language unavailable' }}</span>
+      {% if course.total_section is not none %}<span>{{ course.total_section }} sections</span>{% endif %}
+      {% if course.badge %}<span class="status">{{ course.badge }}</span>{% endif %}
+    </div>
+    <img class="detail-cover" src="{{ course.blob_path or '/static/placeholder.svg' }}" alt="Cover {{ course.title }}" width="640" height="360" loading="lazy" decoding="async" data-cover>
+    <section class="detail-section"><h2>About this course</h2><p class="prose-text">{{ course.description or 'Description unavailable.' }}</p></section>
+    {% if course.is_practice_test %}<section class="detail-section"><h2>Practice tests</h2><p>{{ course.total_practice_test }} practice tests with {{ course.total_practice_test_questions }} questions.</p></section>{% endif %}
+    {% for title, items in [('What you will learn', course.learn_who), ('Who this course is for', course.for_who), ('Requirements', course.requirements)] %}
+    {% if items %}<section class="detail-section"><h2>{{ title }}</h2><ul class="detail-list">{% for item in items %}<li>{{ item }}</li>{% endfor %}</ul></section>{% endif %}
+    {% endfor %}
+    {% if course.moreinfo %}<section class="detail-section"><h2>Additional information</h2><p class="prose-text">{{ course.moreinfo }}</p></section>{% endif %}
+  </article>
+  <aside class="enroll-panel">
+    {% if course.is_expired %}<span class="status status-expired">Expired</span><h2>Coupon expired</h2><p class="muted">Find another course or check back for updated offers.</p>
+    {% elif not coupon_fresh %}<h2>Coupon not verified</h2><p class="muted">Course details could not be updated. Reload to check the coupon.</p>
+    {% elif course.coupon_code %}<p class="section-label">Course coupon</p><h2>Ready to learn?</h2><p class="muted">Copy the coupon and check the offer on Udemy.</p><div class="coupon-box"><code id="coupon-code">{{ course.coupon_code }}</code><button class="btn" type="button" data-copy-coupon>{{ icon('copy', 16) }}Copy Coupon</button></div>
+    {% else %}<h2>Coupon unavailable</h2><p class="muted">The source does not provide a coupon code for this course.</p>{% endif %}
+    {% if course.enroll_url and not course.is_expired and coupon_fresh %}<a class="btn btn-primary enroll-button" href="{{ course.enroll_url }}" target="_blank" rel="noopener noreferrer">Enroll on Udemy {{ icon('arrow', 16) }}</a>{% endif %}
+    <button class="btn detail-save {% if course.id in saved_ids %}is-saved{% endif %}" type="button" data-save="{{ course.id }}" data-title="{{ course.title }}" aria-pressed="{{ 'true' if course.id in saved_ids else 'false' }}">{{ icon('bookmark', 16) }}<span data-save-label>{{ 'Remove bookmark' if course.id in saved_ids else 'Save course' }}</span></button>
+    <p class="enroll-note muted">Check the final price before enrolling. Coupons may expire or change at any time.</p>
+  </aside>
+</div>
+{% if related %}<section class="related-section"><div class="flex flex-wrap items-center justify-between gap-4"><h2>Related courses</h2><a class="inline-link" href="/courses?category={{ course.category|urlquote }}">View category {{ icon('chevron', 16) }}</a></div><div class="course-grid">{% for course in related %}{% include 'partials/course_card.html' %}{% endfor %}</div></section>{% endif %}
+{% endblock %}

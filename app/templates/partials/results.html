@@ -1,0 +1,32 @@
+{% from 'partials/icons.html' import icon %}
+<div class="result-summary flex flex-wrap items-center justify-between gap-2">
+  <p><strong class="tabular-nums">{{ '{:,}'.format(result.count) }}</strong> {% if saved_only %}saved courses{% elif filters.kind == 'practice' %}practice tests{% else %}courses{% endif %}{% if filters.category %} in {{ filters.category }}{% endif %}</p>
+  <p class="muted freshness">{% if stats.sync_state == 'running' %}Catalog sync in progress{% elif stats.refreshed_at %}Updated <time datetime="{{ stats.refreshed_at }}Z" data-local-time>{{ stats.refreshed_at[:16].replace('T', ' ') }} UTC</time>{% else %}Catalog has not been synced yet{% endif %}</p>
+</div>
+{% if error or stats.last_error %}<p class="notice" role="status">{{ error or stats.last_error }} Cached results are still available.</p>{% endif %}
+{% if stats.total and stats.upstream_total > stats.total %}<p class="cache-progress muted">{{ '{:,}'.format(stats.total) }} of {{ '{:,}'.format(stats.upstream_total) }} courses cached locally.</p>{% endif %}
+{% if result.courses %}
+  <div class="course-grid">
+  {% for course in result.courses %}{% include 'partials/course_card.html' %}{% endfor %}
+  </div>
+{% else %}
+  <div class="empty-state">
+    {{ icon('bookmark' if saved_only else 'search', 28) }}
+    <h2>{% if saved_only and not stats.saved %}No saved courses yet{% elif saved_only %}No saved courses match{% elif stats.sync_state == 'running' %}Preparing the course catalog{% elif stats.total == 0 %}Catalog unavailable{% else %}No courses found{% endif %}</h2>
+    <p class="muted">{% if saved_only and not stats.saved %}Save courses from the catalog to find them here.{% elif saved_only %}Try a different keyword or clear your filters.{% elif stats.sync_state == 'running' %}Courses will appear as the catalog sync progresses.{% elif stats.total == 0 %}Refresh the catalog to fetch courses from the source.{% else %}Try a different keyword or a broader category.{% endif %}</p>
+    {% if saved_only and not stats.saved %}<a class="btn" href="/courses">Browse courses</a>{% elif saved_only %}<a class="btn" href="/courses?kind=saved">Clear filters</a>{% elif stats.sync_state == 'running' %}<a class="btn" href="{{ page_url(1) }}" hx-get="{{ page_url(1) }}" hx-target="#results">Check catalog</a>{% elif stats.total == 0 %}<button class="btn" type="button" data-refresh>{{ icon('refresh', 16) }}Refresh catalog</button>{% else %}<a class="btn" href="/courses">Clear filters</a>{% endif %}
+  </div>
+{% endif %}
+{% if result.total_pages > 1 %}
+<nav class="pagination flex flex-wrap items-center justify-between gap-4" aria-label="Catalog pages">
+  <p class="muted">Page {{ result.page }} of {{ result.total_pages }}</p>
+  <div class="flex flex-wrap items-center gap-2">
+    {% if result.page > 1 %}<a class="page-button" href="{{ page_url(result.page - 1) }}" hx-get="{{ page_url(result.page - 1) }}" hx-target="#results" hx-push-url="true" hx-indicator="#catalog-loading">Previous</a>{% endif %}
+    {% for number in page_numbers %}
+      {% if not loop.first and number > page_numbers[loop.index0-1] + 1 %}<span class="muted" aria-hidden="true">…</span>{% endif %}
+      <a class="page-button {% if number == result.page %}is-active{% endif %}" {% if number == result.page %}aria-current="page"{% endif %} href="{{ page_url(number) }}" hx-get="{{ page_url(number) }}" hx-target="#results" hx-push-url="true" hx-indicator="#catalog-loading">{{ number }}</a>
+    {% endfor %}
+    {% if result.page < result.total_pages %}<a class="page-button" href="{{ page_url(result.page + 1) }}" hx-get="{{ page_url(result.page + 1) }}" hx-target="#results" hx-push-url="true" hx-indicator="#catalog-loading">Next</a>{% endif %}
+  </div>
+</nav>
+{% endif %}

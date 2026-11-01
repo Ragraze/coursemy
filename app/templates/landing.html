@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}Coursemy · Room for curiosity{% endblock %}
+{% block body_class %}landing-page{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="/static/css/landing.css"><link rel="stylesheet" href="/static/css/hero.css">{% endblock %}
+{% block content %}
+<section class="landing-hero" aria-labelledby="hero-title">
+  <div class="learning-mosaic" aria-label="Courses on Coursemy">
+    <div class="mosaic-message"><span>Always<br>something<br>to learn.</span><span class="mosaic-mark" aria-hidden="true">c.</span></div>
+    {% for course in featured[:4] %}
+    <a class="mosaic-course mosaic-course-{{ loop.index }}" href="/course/{{ course.slug_part|urlquote }}" aria-label="View course {{ course.title }}">
+      <img src="{{ course.blob_path or '/static/placeholder.svg' }}" alt="{{ course.title }}" width="640" height="360" fetchpriority="{{ 'high' if loop.first else 'auto' }}" data-cover>
+      <span>{{ course.category or 'View course' }}</span>
+    </a>
+    {% else %}<div class="mosaic-empty"><p>Your next topic<br>is waiting.</p><a href="/courses">Browse courses</a></div>{% endfor %}
+  </div>
+  <div class="hero-editorial">
+    <div class="hero-aside"><p>Room for<br>curiosity.</p><a href="/courses" class="hero-catalog-link">Browse courses {{ icon('arrow', 20) }}</a></div>
+    <div class="hero-copy"><h1 id="hero-title">Learn more.<br>Go further.</h1><p class="hero-description">Find Udemy courses with free coupons, from your first skill to your next career move.</p>
+      <form class="hero-search" action="/courses" method="get" role="search"><label class="sr-only" for="hero-query">What you want to learn</label>{{ icon('search', 21) }}<input id="hero-query" type="search" name="q" maxlength="300" placeholder="What will you learn today?"><button type="submit">Find courses</button></form>
+      <div class="hero-suggestions"><span>Try:</span>{% for topic in ['Python', 'Excel', 'Design'] %}<a href="/courses?q={{ topic }}">{{ topic }}</a>{% endfor %}</div>
+    </div>
+  </div>
+</section>
+<section class="landing-discover" aria-labelledby="discover-title">
+  <div class="discover-heading"><h2 id="discover-title">Follow your<br> curiosity.</h2><p>One topic can open many doors. Pick a field and find a course to get started.</p></div>
+  <div class="topic-index">{% for topic in categories %}<a href="/courses?category={{ topic|urlquote }}"><span>{{ topic }}</span>{{ icon('chevron', 18) }}</a>{% endfor %}</div>
+</section>
+{% if featured %}
+<section class="landing-featured" aria-labelledby="featured-title"><div class="featured-heading"><h2 id="featured-title">Start here.</h2><a href="/courses">View all courses {{ icon('chevron', 18) }}</a></div><div class="course-grid">{% for course in featured[:3] %}{% include 'partials/course_card.html' %}{% endfor %}</div></section>
+{% endif %}
+<section class="landing-outro"><h2>Learn today.<br>Build tomorrow.</h2><div><p>Find a course, check its coupon, and take your next step.</p><a href="/courses" class="outro-link">Browse courses {{ icon('arrow', 22) }}</a></div></section>
+{% endblock %}

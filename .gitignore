@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.env
+*.db
+*.db-shm
+*.db-wal
+app/static/blobs/*
+!app/static/blobs/.gitkeep
+.tools/
+.taste-skill/
+dist/
+build/
+*.egg-info/

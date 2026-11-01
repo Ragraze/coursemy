@@ -1,0 +1,14 @@
+.git
+.agents
+.codex
+.aws
+.venv
+.env
+.tools
+.taste-skill
+__pycache__
+**/__pycache__
+.pytest_cache
+*.db
+*.db-*
+app/static/blobs/*.jpg

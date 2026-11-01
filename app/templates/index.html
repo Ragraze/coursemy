@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block body_class %}courses-page{% endblock %}
+{% block content %}
+<section class="page-heading flex flex-wrap items-start justify-between gap-6">
+  <div>
+    <h1>Discover Free Courses</h1>
+    <p class="intro">Find something you want to learn. Choose a course, check its coupon, and get started.</p>
+  </div>
+  <button type="button" class="btn refresh-open" data-refresh>{{ icon('refresh', 16) }}Refresh catalog</button>
+</section>
+<form id="filters" action="/courses" method="get"
+  hx-get="/courses" hx-target="#results" hx-push-url="true" hx-indicator="#catalog-loading"
+  hx-sync="this:replace" hx-trigger="submit, input changed delay:300ms from:#q, change from:#sort, change from:#hide-expired, change from:.category-input, change from:.kind-input">
+  <div class="catalog-layout">
+    <aside class="category-sidebar">
+      <details class="category-disclosure" open x-data="{ desktop: window.innerWidth > 720 }" x-init="$el.open = desktop" @resize.window="desktop = window.innerWidth > 720; if (desktop) $el.open = true">
+        <summary>Categories <span class="muted">13 categories</span></summary>
+        <fieldset class="category-list">
+          <legend class="sr-only">Filter by category</legend>
+          <label class="category-choice"><input class="category-input" type="radio" name="category" value="" {% if not filters.category %}checked{% endif %}><span>All categories</span></label>
+          {% for category in categories %}
+          <label class="category-choice"><input class="category-input" type="radio" name="category" value="{{ category }}" {% if filters.category == category %}checked{% endif %}><span>{{ category }}</span></label>
+          {% endfor %}
+        </fieldset>
+      </details>
+      <div class="sidebar-note">{{ icon('info', 16) }}<p>Coupons expire. Check the details before enrolling.</p></div>
+    </aside>
+    <div class="catalog-content min-w-0">
+      <fieldset class="course-tabs flex items-center gap-6">
+        <legend class="sr-only">Course type</legend>
+        <label class="tab-choice"><input class="kind-input" type="radio" name="kind" value="courses" {% if filters.kind == 'courses' %}checked{% endif %}><span>{{ icon('book', 16) }}Courses</span></label>
+        <label class="tab-choice"><input class="kind-input" type="radio" name="kind" value="practice" {% if filters.kind == 'practice' %}checked{% endif %}><span>{{ icon('check', 16) }}Practice Tests</span></label>
+        <label class="tab-choice"><input class="kind-input" type="radio" name="kind" value="saved" {% if filters.kind == 'saved' %}checked{% endif %}><span>{{ icon('bookmark', 16) }}Saved Courses</span></label>
+      </fieldset>
+      <div class="filter-toolbar flex flex-wrap items-end gap-4">
+        <div class="search-control">
+          <label for="q">Find courses</label>
+          <div class="search-input flex items-center gap-2">{{ icon('search', 18) }}<input id="q" name="q" type="search" maxlength="300" placeholder="Title, instructor, or topic..." value="{{ filters.q }}"><button type="submit" aria-label="Find courses">{{ icon('chevron', 18) }}</button></div>
+        </div>
+        <div class="sort-control"><label for="sort">Sort by</label><select id="sort" name="sort"><option value="latest" {% if filters.sort == 'latest' %}selected{% endif %}>Latest</option><option value="rating" {% if filters.sort == 'rating' %}selected{% endif %}>Top Rated</option><option value="title" {% if filters.sort == 'title' %}selected{% endif %}>Title A-Z</option></select></div>
+        <label class="expired-control flex items-center gap-2"><input type="checkbox" id="hide-expired" name="hide_expired" value="true" {% if filters.hide_expired %}checked{% endif %}>Hide Expired</label>
+      </div>
+      <noscript><p><button class="btn btn-primary" type="submit">Apply filters</button></p></noscript>
+      <p id="request-error" class="notice" role="alert" hidden>Results could not be loaded. <button type="submit" class="text-button">Try again</button></p>
+      <div class="results-container">
+        <div id="catalog-loading" class="htmx-indicator" aria-hidden="true"><div class="course-grid">{% for n in range(3) %}<div class="skeleton-card"><div class="skeleton-cover"></div><div class="skeleton-line"></div><div class="skeleton-line short"></div></div>{% endfor %}</div></div>
+        <div id="results" aria-live="polite" aria-busy="false">{% include 'partials/results.html' %}</div>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}

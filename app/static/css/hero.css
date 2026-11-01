@@ -1,0 +1,20 @@
+.landing-hero{min-height:calc(100svh - 104px);display:flex;flex-direction:column}
+.learning-mosaic{height:clamp(160px,28svh,290px);flex-shrink:0}
+.hero-editorial{flex:1;align-content:center;padding-top:clamp(24px,4svh,48px);padding-bottom:clamp(28px,5svh,60px)}
+.hero-copy h1{font-size:clamp(42px,min(5.9vw,9svh),85px)}
+@media(min-width:721px) and (max-height:800px){
+ .learning-mosaic{height:clamp(140px,25svh,210px)}
+ .hero-description{margin-top:20px;font-size:16px}
+ .hero-search{margin-top:18px}
+ .mosaic-message>span:first-child{font-size:24px}
+ .mosaic-mark{font-size:70px}
+}
+@media(max-width:720px){
+ .landing-hero{min-height:calc(100svh - 94px)}
+ .learning-mosaic{height:clamp(140px,24svh,230px)}
+ .hero-editorial{padding-top:clamp(22px,3.5svh,32px);padding-bottom:28px;justify-content:center;gap:24px}
+ .hero-copy h1{font-size:clamp(29px,8.7vw,61px)}
+ .hero-description{margin-top:20px}
+ .hero-search{margin-top:20px}
+}
+@media(max-width:360px){.hero-search{gap:6px;padding-left:9px}.hero-search button{padding-inline:9px}.hero-editorial{padding-bottom:18px;gap:18px}.hero-description{font-size:15px}}

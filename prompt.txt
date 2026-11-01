@@ -1,0 +1,139 @@
+Buatkan aplikasi web katalog kursus (https://courspora.my.id/course) dengan nama "Coursemy", memakai framework Python FastAPI.
+Tujuannya: katalog kursus gratis Udemy yang bisa dicari, difilter, dibuka detailnya, disimpan, dan kuponnya bisa disalin/dipakai enroll.
+
+1. TECH STACK PYTHON (WAJIB PAKAI INI)
+- Bahasa: Python 3.12+
+- Framework backend + web: FastAPI, server Uvicorn (ASGI)
+- Template HTML: Jinja2, server-side rendering, tanpa framework JavaScript berat. Interaksi ringan pakai HTMX + Alpine.js via CDN.
+- Styling: Tailwind CSS (pakai Tailwind CLI standalone, tanpa project Node), ikon pakai SVG Lucide inline.
+- Database: PostgreSQL untuk production, SQLite untuk development lokal. ORM: SQLAlchemy 2.0, migrasi: Alembic.
+- Validasi data: Pydantic v2 (schemas response/request).
+- HTTP client ke upstream: httpx AsyncClient, timeout 15 detik, retry 2x.
+- Gambar: Pillow untuk download, resize, dan simpan cover ke folder lokal.
+- Scheduler: APScheduler (BackgroundScheduler) untuk refresh katalog harian, plus endpoint cron manual yang diproteksi token.
+- Testing: pytest + httpx TestClient/TestClient async.
+- Package manager: pip + virtualenv, atau uv. Sertakan requirements.txt dan pyproject.toml.
+- Deployment: Uvicorn + Gunicorn (worker uvicorn.workers.UvicornWorker) di VPS/Docker, atau Railway/Render. Alternatif: Docker + docker-compose (app + postgres).
+
+Dependencies utama yang harus ada di requirements.txt:
+fastapi, uvicorn[standard], sqlalchemy, alembic, psycopg[binary] (untuk Postgres), pydantic, pydantic-settings, httpx, jinja2, python-multipart, pillow, apscheduler, python-dotenv, pytest, httpx (untuk test).
+
+Environment variables di .env (jangan hardcode di kode):
+UPSTREAM_API_BASE=https://courspora.my.id/api
+DATABASE_URL=sqlite:///./courspora.db (lokal) atau postgresql+psycopg://user:pass@host:5432/courspora (production)
+CRON_SECRET=isi-dengan-string-acak-panjang
+BLOB_DIR=app/static/blobs
+APP_NAME=Coursemy
+
+Perintah yang harus jalan:
+python -m venv .venv
+source .venv/bin/activate (Windows: .venv\Scripts\activate)
+pip install -r requirements.txt
+alembic upgrade head
+uvicorn app.main:app --reload (jalan di http://127.0.0.1:8000)
+Dokumen API otomatis FastAPI harus bisa dibuka di /docs (Swagger) dan /redoc.
+
+Struktur folder yang harus dibuat:
+app/main.py (buat FastAPI app, mount static, include router, start scheduler)
+app/config.py (Settings dari pydantic-settings, baca .env)
+app/database.py (engine, SessionLocal, Base, get_db)
+app/models.py (Course, SavedCourse, CatalogMeta)
+app/schemas.py (CourseOut, CourseDetailOut, PaginatedCourses, CategoryOut, RefreshResult)
+app/services/upstream.py (fetch ke courspora.my.id/api)
+app/services/coupon.py (ekstrak couponCode dari enrollUrl)
+app/services/catalog.py (sync katalog ke database, search, filter, sorting)
+app/services/images.py (download cover ke BLOB_DIR)
+app/routers/pages.py (HTML: /, /course/{slug}, /saved)
+app/routers/courses.py (API JSON)
+app/routers/admin.py (API refresh katalog, diproteksi CRON_SECRET)
+app/templates/base.html, index.html, course_detail.html, saved.html, partials/course_card.html, partials/api_reference.html
+app/static/css/style.css (hasil build Tailwind), app/static/js/main.js (copy kupon, toggle save, debounce search)
+app/static/blobs/ (hasil download cover, jangan commit file blob besar ke git, pakai .gitignore kecuali .gitkeep)
+alembic/ (migrasi)
+tests/test_coupon.py, tests/test_catalog.py, tests/test_api.py
+Dockerfile dan docker-compose.yml (opsional tapi disarankan)
+
+Skema database (SQLAlchemy, minimal):
+Course: id Integer primary_key, title String, instructor String, image_url String, blob_path String nullable, total_hour Float nullable, description Text, slug String unique index, slug_part String index, rate Float nullable, category String index, badge String nullable, language String nullable, created_at DateTime index, is_expired Boolean default False, total_practice_test Integer default 0, total_practice_test_questions Integer default 0, is_practice_test Boolean default False, enroll_url String nullable, coupon_code String nullable, moreinfo Text nullable, total_section Integer nullable, udemy_id String nullable, learn_who JSON nullable, for_who JSON nullable, requirements JSON nullable, updated_at DateTime
+SavedCourse: id String primary_key default uuid, course_id Integer ForeignKey, created_at DateTime
+CatalogMeta: key String primary_key, value String, updated_at DateTime
+
+2. SUMBER DATA - UPSTREAM API (TANPA AUTH)
+Base URL: https://courspora.my.id/api
+
+a. GET /course?page=N
+   - List kursus, 15 kursus per halaman.
+   - Response: { "Course": [...], "count": total_keseluruhan }
+   - List ini TIDAK berisi kupon dan harga.
+   - PENTING: parameter ?search=, ?category=, dan ?limit= pada endpoint ini DIABAIKAN oleh upstream. Jangan mengandalkan endpoint ini untuk search/filter.
+
+b. GET /course/detail?slug=<bagian-terakhir-dari-slug>
+   - Detail satu kursus, dan satu-satunya sumber kupon yang sah.
+   - Response berisi: enrollUrl (link Udemy dengan ?couponCode=...), moreinfo, totalSection, udemyId, CourseLearnWho, CourseForWho, requirements, plus semua field list.
+   - Ekstrak couponCode dari enrollUrl DI SISI SERVER di app/services/coupon.py, jangan di browser, jangan menebak atau mengarang kode kupon.
+
+c. GET /course/detail/category?category=<nama-kategori>
+   - Mengembalikan full detail records untuk satu kategori, urutan terbaru dulu.
+   - Gunakan ini untuk filter kategori yang akurat.
+
+d. JANGAN pakai GET /course/status (sudah dicoba, hasilnya Not Found).
+e. GET /api/categories upstream hanya mengembalikan 1 item, jadi JANGAN pakai itu sebagai daftar filter. Daftar kategori UI adalah 13 kategori hardcoded dari listCategories, urutannya harus persis, termasuk Development dan IT & Software.
+
+3. ARSITEKTUR DAN CACHE
+- Buat cache katalog lokal di database via SQLAlchemy, bukan hanya di memory.
+- Saat pertama load dan saat refresh, ambil halaman demi halaman dari GET /course?page=N sampai katalog lengkap (sekitar 4.000 kursus), simpan dengan upsert berdasarkan id/slug agar tidak duplikat.
+- Search, filter kategori, sorting, Hide Expired, dan switcher Courses/Practice Tests dilakukan dari DATABASE LOKAL dengan query SQLAlchemy, bukan dari parameter upstream.
+- Sediakan refresh katalog manual (tombol di halaman) dan otomatis harian via APScheduler + endpoint POST /api/catalog/refresh (wajib header Authorization Bearer CRON_SECRET). Tampilkan total kursus dan waktu terakhir refresh (refreshedAt dari CatalogMeta).
+- Cover image: DOWNLOAD gambar dari imageUrl pakai Pillow, simpan ke app/static/blobs/<id>.jpg, simpan path-nya di blob_path, tampilkan dari /static/blobs/... di template Jinja2. JANGAN hotlink langsung ke Udemy CDN (img-c.udemycdn.com). Jika download gagal, tampilkan placeholder dan catat di log, jangan sampai kartu rusak.
+
+4. FITUR BERANDA (HTML, ROUTE /)
+- Header dengan judul "Discover Free Courses" dan teks intro singkat.
+- Grid kartu kursus responsif: cover, badge, judul, instruktur, rating, durasi (totalHour), kategori, bahasa, dan label Expired jika isExpired = true.
+- Search box: cari di judul, instruktur, deskripsi, dan kategori dari database lokal, hasil update saat mengetik (debounce 300ms, pakai HTMX atau fetch).
+- Filter 13 kategori (tombol/chip), bisa dikombinasikan dengan search, pakai query parameter ?category=...&q=...&sort=...&page=...
+- Sorting: Latest (created_at terbaru dulu), Top Rated (rate tertinggi dulu), Title A-Z.
+- Toggle Hide Expired: jika aktif, sembunyikan isExpired = true.
+- Switcher Courses / Practice Tests: Practice Tests menampilkan hanya isPracticeTest = true, lengkap dengan totalPracticeTest dan totalPracticeTestQuestions.
+- Pagination 15 kursus per halaman, dengan nomor halaman, Previous/Next, dan total halaman dari count. Pagination harus server-side dari database, bukan load semua kursus ke browser.
+- Tombol Save/Bookmark di tiap kartu, tersimpan di tabel SavedCourse, halaman daftarnya di /saved.
+
+5. FITUR DETAIL KURSUS (HTML, ROUTE /course/{slug})
+- Klik kartu membuka halaman detail, data diambil dari database + jika belum lengkap, dari GET /course/detail?slug=... lewat service server, bukan fetch langsung ke upstream dari browser.
+- Tampilkan: cover besar, judul, instruktur, rating, durasi, totalSection, kategori, bahasa, badge, deskripsi lengkap, moreinfo teks polos, daftar CourseLearnWho, daftar CourseForWho, dan requirements.
+- Jika ada kupon: tampilkan kode kupon jelas, tombol Copy Coupon (JavaScript sederhana), dan tombol Enroll ke Udemy (enrollUrl). Jika tidak ada kupon atau kupon expired, tampilkan statusnya dengan jelas, jangan tampilkan kode palsu.
+- Tombol kembali ke katalog, dan tombol Save.
+- Bagian Related Courses: kursus lain dari kategori yang sama, urutan terbaru, dan JANGAN tampilkan kursus yang sedang dibuka.
+
+6. API JSON APLIKASI (FASTAPI ROUTER, TYPED DENGAN PYDANTIC)
+Implementasikan endpoint berikut, response harus sesuai schemas.py:
+- GET /api/courses?page=1&category=... : list dari database, 15 per halaman
+- GET /api/courses/search?q=... : search dari database, kembalikan hasil dan jumlahnya
+- GET /api/courses/{slugPart} : detail + couponCode hasil ekstrak server. slugPart = bagian terakhir slug setelah slash terakhir.
+- GET /api/courses/{slugPart}/related : kursus terkait, tanpa kursus saat ini
+- POST /api/saved/{courseId}/toggle dan GET /api/saved : daftar kursus yang disimpan
+- GET /api/categories : mengembalikan 13 kategori persis sesuai urutan
+- POST /api/catalog/refresh : refresh halaman 1 dan update total katalog, kembalikan pesan seperti "Refreshed page 1 - 15 courses, XXXX total in the catalog" dan refreshedAt
+- GET /api/info dan GET /api/stats : info API upstream dan statistik katalog
+- Sediakan alias POST /api/catalog/refreshCourses untuk refreshCatalog agar job lama tetap jalan.
+
+7. DESAIN UI/UX
+- Modern, bersih, mobile-first, dan cepat. Kartu rapi, teks mudah dibaca, kontras cukup, pakai Tailwind secara konsisten di semua template Jinja2.
+- Halaman tidak boleh horizontal overflow di HP. Blok kode di halaman dokumentasi harus wrap atau scroll di dalam container-nya saja, bukan membuat halaman bergeser.
+- Loading state (skeleton kartu), empty state ("tidak ada kursus ditemukan"), dan error state untuk API gagal harus jelas.
+- Semua cover pakai tag img dengan loading lazy dan ukuran yang sudah di-resize Pillow.
+
+8. HALAMAN DOKUMENTASI API
+- Di bawah katalog, tambahkan section API Reference yang mendokumentasikan kontrak REST yang sama: base URL, ketiga endpoint upstream di atas, contoh response, catatan bahwa search/category/limit di list endpoint diabaikan, dan catatan ekstraksi kupon server-side.
+- Sertakan contoh pemanggilan GET /api/courses, GET /api/courses/search, dan GET /api/courses/{slugPart}. Swagger di /docs tetap harus jalan sebagai dokumentasi FastAPI.
+
+9. KRITERIA SELESAI - HARUS LOLOS SEMUA
+- uvicorn app.main:app --reload jalan tanpa error, dan pytest lolos semua.
+- GET /api/categories mengembalikan 13 kategori dengan urutan benar.
+- POST /api/catalog/refresh mengambil 15 kursus halaman 1 dan total katalog benar, dan bisa dipanggil ulang tanpa duplikat.
+- GET /api/courses halaman 1 menampilkan cover dari /static/blobs/... yang bisa dibuka, bukan link CDN mentah.
+- GET /api/courses?category=Development mengembalikan detail records dengan kupon yang diekstrak dari server.
+- GET /api/courses/{slugPart} mengembalikan couponCode, totalSection, udemyId, learnWho/forWho yang sudah di-flatten, dan moreinfo teks polos.
+- GET /api/courses/search?q=python mengembalikan hasil dari database lokal, bukan dari parameter upstream.
+- GET /api/courses/{slugPart}/related tidak memasukkan kursus saat ini.
+- POST /api/saved/{id}/toggle true -> GET /api/saved berisi 1 kursus -> toggle lagi -> kosong.
+- Tidak ada console error, tidak ada gambar rusak, dan tidak ada overflow horizontal di HP.

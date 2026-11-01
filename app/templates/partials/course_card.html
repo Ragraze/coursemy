@@ -1,0 +1,16 @@
+<article class="course-card flex flex-col" data-course-id="{{ course.id }}">
+  <a class="cover-link" href="/course/{{ course.slug_part|urlquote }}" tabindex="-1" aria-hidden="true"><img src="{{ course.blob_path or '/static/placeholder.svg' }}" alt="" width="640" height="360" loading="lazy" decoding="async" data-cover></a>
+  <div class="course-card-body flex flex-col">
+    <div class="card-topline flex items-center justify-between gap-2"><span class="course-category">{{ course.category or 'Category unavailable' }}</span><button type="button" class="save-button {% if course.id in saved_ids %}is-saved{% endif %}" data-save="{{ course.id }}" aria-label="{% if course.id in saved_ids %}Remove bookmark{% else %}Save course{% endif %}: {{ course.title }}" data-title="{{ course.title }}" aria-pressed="{{ 'true' if course.id in saved_ids else 'false' }}">{{ icon('bookmark', 18) }}</button></div>
+    <h2 class="course-title"><a href="/course/{{ course.slug_part|urlquote }}">{{ course.title }}</a></h2>
+    <p class="course-instructor muted">{{ course.instructor or 'Instructor unavailable' }}</p>
+    <div class="card-metadata flex flex-wrap items-center gap-4">
+      <span class="flex items-center gap-1">{{ icon('star', 14) }}<strong>{{ '%.1f'|format(course.rate) if course.rate else 'Not rated' }}</strong></span>
+      {% if course.is_practice_test %}<span>{{ course.total_practice_test }} tests · {{ course.total_practice_test_questions }} questions</span>{% elif course.total_hour is not none %}<span class="flex items-center gap-1">{{ icon('clock', 14) }}{{ '%g'|format(course.total_hour) }} hr</span>{% endif %}
+    </div>
+    <div class="card-footer flex flex-wrap items-center justify-between gap-2">
+      <span class="muted flex items-center gap-1">{{ icon('globe', 13) }}{{ course.language or 'Language unavailable' }}</span>
+      {% if course.is_expired %}<span class="status status-expired">Expired</span>{% elif course.badge %}<span class="status">{{ course.badge }}</span>{% endif %}
+    </div>
+  </div>
+</article>
