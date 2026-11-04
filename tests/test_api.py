@@ -10,14 +10,14 @@ def test_refresh_button_has_no_dialog_or_token(web):
     assert "Token administrator" not in page.text
 
 
-def test_page_one_refresh_and_legacy_alias_are_idempotent(web):
+def test_page_one_refresh_is_idempotent_and_legacy_alias_is_removed(web):
     response = web.post("/api/catalog/refresh")
     assert response.status_code == 200
     assert response.json()["count"] == 15
     assert response.json()["total"] == 16
     assert "Refreshed page 1 - 15 courses" in response.json()["message"]
     assert response.json()["refreshedAt"]
-    assert web.post("/api/catalog/refreshCourses").status_code == 200
+    assert web.post("/api/catalog/refreshCourses").status_code == 404
     assert web.get("/api/stats").json()["total"] == 15
 
 
@@ -27,6 +27,21 @@ def test_categories_preserve_canonical_order(web):
         "Development", "Business", "Finance & Accounting", "IT & Software", "Office Productivity",
         "Personal Development", "Design", "Marketing", "Lifestyle", "Photography & Video", "Health & Fitness", "Music", "Teaching & Academics",
     ]
+
+
+def test_page_statistics_recomputed_after_catalog_refresh(web):
+    for refresh, expected_total in [(None, 0), ("/api/catalog/refresh", 15), ("/api/catalog/refresh?full=true", 16)]:
+        if refresh:
+            assert web.post(refresh).status_code == 200
+        for path in ("/", "/courses"):
+            page = web.get(path)
+            assert page.headers["Cache-Control"] == "private, no-store"
+            stats = page.context["stats"]
+            assert stats.total == expected_total
+            assert stats.practice_tests == (1 if expected_total else 0)
+            assert stats.courses == expected_total - stats.practice_tests
+            if path == "/":
+                assert sum(count for _, count in page.context["category_counts"]) == stats.courses
 
 
 def test_list_pagination_and_local_covers(populated):
@@ -80,7 +95,7 @@ def test_save_toggle_is_persisted_and_scoped_to_browser(populated):
 
 def test_html_partial_detail_expired_and_api_docs(populated):
     page = populated.get("/courses")
-    assert page.status_code == 200 and "Discover Free Courses" in page.text
+    assert page.status_code == 200 and 'id="catalog-title"' in page.text
     assert 'id="api-reference"' not in page.text and 'id="filters"' in page.text
     partial = populated.get("/courses?q=nomatch", headers={"HX-Request": "true"})
     assert "No courses found" in partial.text and "<html" not in partial.text
@@ -215,3 +230,29 @@ def test_saved_tab_pagination_and_partial_update_after_removal(populated):
     assert "<html" not in partial.text
     assert 'data-course-id="1"' not in partial.text
     assert '15</strong> saved courses' in partial.text
+
+
+def test_async_catalog_routes_run_database_work_outside_event_loop(populated, database):
+    import asyncio
+    from sqlalchemy import event
+
+    def check_thread(connection, cursor, statement, parameters, context, executemany):
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return
+        raise AssertionError("Synchronous database query ran on the event loop")
+
+    with database() as db:
+        event.listen(db.bind, "before_cursor_execute", check_thread)
+        try:
+            for path in (
+                "/courses", "/courses?category=Development", "/api/courses",
+                "/api/courses/search?q=python", "/api/courses/python-course-1",
+                "/course/python-course-1", "/course/missing",
+            ):
+                response = populated.get(path)
+                assert response.status_code == (404 if path.endswith("/missing") else 200)
+            assert populated.post("/api/catalog/refresh").status_code == 200
+        finally:
+            event.remove(db.bind, "before_cursor_execute", check_thread)

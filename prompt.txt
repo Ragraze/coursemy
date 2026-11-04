@@ -1,4 +1,4 @@
-Buatkan aplikasi web katalog kursus (https://courspora.my.id/course) dengan nama "Coursemy", memakai framework Python FastAPI.
+Buatkan aplikasi web katalog kursus dari upstream API dengan nama "Coursemy", memakai framework Python FastAPI.
 Tujuannya: katalog kursus gratis Udemy yang bisa dicari, difilter, dibuka detailnya, disimpan, dan kuponnya bisa disalin/dipakai enroll.
 
 1. TECH STACK PYTHON (WAJIB PAKAI INI)
@@ -19,8 +19,8 @@ Dependencies utama yang harus ada di requirements.txt:
 fastapi, uvicorn[standard], sqlalchemy, alembic, psycopg[binary] (untuk Postgres), pydantic, pydantic-settings, httpx, jinja2, python-multipart, pillow, apscheduler, python-dotenv, pytest, httpx (untuk test).
 
 Environment variables di .env (jangan hardcode di kode):
-UPSTREAM_API_BASE=https://courspora.my.id/api
-DATABASE_URL=sqlite:///./courspora.db (lokal) atau postgresql+psycopg://user:pass@host:5432/courspora (production)
+UPSTREAM_API_BASE=https://upstream.example/api
+DATABASE_URL=sqlite:///./coursemy.db (lokal) atau postgresql+psycopg://user:pass@host:5432/coursemy (production)
 CRON_SECRET=isi-dengan-string-acak-panjang
 BLOB_DIR=app/static/blobs
 APP_NAME=Coursemy
@@ -39,7 +39,7 @@ app/config.py (Settings dari pydantic-settings, baca .env)
 app/database.py (engine, SessionLocal, Base, get_db)
 app/models.py (Course, SavedCourse, CatalogMeta)
 app/schemas.py (CourseOut, CourseDetailOut, PaginatedCourses, CategoryOut, RefreshResult)
-app/services/upstream.py (fetch ke courspora.my.id/api)
+app/services/upstream.py (fetch ke upstream API yang dikonfigurasi)
 app/services/coupon.py (ekstrak couponCode dari enrollUrl)
 app/services/catalog.py (sync katalog ke database, search, filter, sorting)
 app/services/images.py (download cover ke BLOB_DIR)
@@ -59,7 +59,7 @@ SavedCourse: id String primary_key default uuid, course_id Integer ForeignKey, c
 CatalogMeta: key String primary_key, value String, updated_at DateTime
 
 2. SUMBER DATA - UPSTREAM API (TANPA AUTH)
-Base URL: https://courspora.my.id/api
+Base URL: https://upstream.example/api
 
 a. GET /course?page=N
    - List kursus, 15 kursus per halaman.
@@ -114,7 +114,6 @@ Implementasikan endpoint berikut, response harus sesuai schemas.py:
 - GET /api/categories : mengembalikan 13 kategori persis sesuai urutan
 - POST /api/catalog/refresh : refresh halaman 1 dan update total katalog, kembalikan pesan seperti "Refreshed page 1 - 15 courses, XXXX total in the catalog" dan refreshedAt
 - GET /api/info dan GET /api/stats : info API upstream dan statistik katalog
-- Sediakan alias POST /api/catalog/refreshCourses untuk refreshCatalog agar job lama tetap jalan.
 
 7. DESAIN UI/UX
 - Modern, bersih, mobile-first, dan cepat. Kartu rapi, teks mudah dibaca, kontras cukup, pakai Tailwind secara konsisten di semua template Jinja2.

@@ -1,0 +1,41 @@
+{% macro course_text(value) -%}
+{% set content = namespace(blocks=[]) %}
+{% for line in (value or '').splitlines() %}
+  {% set text = line.strip() %}
+  {% if text %}
+    {% set number, separator, rest = text.partition('.') %}
+    {% if not (separator and number.isdigit() and rest[:1].isspace()) %}
+      {% set number, separator, rest = text.partition(')') %}
+    {% endif %}
+    {% set ordered = separator and number.isdigit() and rest[:1].isspace() %}
+    {% set bullet = text[:1] in ['-', '*', '•', '▪', '‣'] and text[1:2].isspace() %}
+    {% if ordered or bullet %}
+      {% set kind = 'ordered' if ordered else 'bullets' %}
+      {% set start = number|int if ordered else 1 %}
+      {% set item = rest.strip() if ordered else text[1:].strip() %}
+      {% set previous = content.blocks[-1] if content.blocks else none %}
+      {% if previous and previous.kind == kind and (not ordered or start == previous.start + previous['items']|length) %}
+        {% set _ = previous['items'].append(item) %}
+      {% else %}
+        {% set _ = content.blocks.append({'kind': kind, 'start': start, 'items': [item]}) %}
+      {% endif %}
+    {% else %}
+      {% set kind = 'heading' if text|length < 140 and text.endswith(':') else 'paragraph' %}
+      {% set _ = content.blocks.append({'kind': kind, 'text': text}) %}
+    {% endif %}
+  {% endif %}
+{% endfor %}
+<div class="course-prose">
+  {% for block in content.blocks %}
+    {% if block.kind == 'heading' %}
+      <h3>{{ block.text }}</h3>
+    {% elif block.kind == 'ordered' %}
+      <ol class="detail-list" start="{{ block.start }}">{% for item in block['items'] %}<li>{{ item }}</li>{% endfor %}</ol>
+    {% elif block.kind == 'bullets' %}
+      <ul class="detail-list">{% for item in block['items'] %}<li>{{ item }}</li>{% endfor %}</ul>
+    {% else %}
+      <p>{{ block.text }}</p>
+    {% endif %}
+  {% endfor %}
+</div>
+{%- endmacro %}

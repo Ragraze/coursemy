@@ -1,27 +1,39 @@
 {% extends 'base.html' %}
+{% from 'partials/course_text.html' import course_text %}
 {% block title %}{{ course.title }} · {{ app_name }}{% endblock %}
+{% block body_class %}course-page{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="/static/css/course-detail.css">{% endblock %}
 {% block content %}
-<div class="detail-back"><a href="/courses" class="inline-link">{{ icon('back', 16) }}Back to courses</a></div>
+<section class="page-hero course-hero" aria-labelledby="course-title">
+  <div class="page-hero-inner course-hero-inner">
+    <div class="course-hero-copy">
+      <a href="/courses" class="inline-link course-hero-back">{{ icon('back', 16) }}Back to courses</a>
+      <p class="course-category">{{ course.category or 'Course' }}</p>
+      <h1 id="course-title">{{ course.title }}</h1>
+      <p class="course-hero-instructor muted">By {{ course.instructor or 'Instructor unavailable' }}</p>
+      <div class="course-hero-meta flex flex-wrap items-center gap-4">
+        <span class="flex items-center gap-1">{{ icon('star', 16) }}{{ '%.1f'|format(course.rate) if course.rate else 'Not rated' }}</span>
+        {% if course.total_hour is not none %}<span class="flex items-center gap-1">{{ icon('clock', 16) }}{{ '%g'|format(course.total_hour) }} hr</span>{% endif %}
+        <span class="flex items-center gap-1">{{ icon('globe', 16) }}{{ course.language or 'Language unavailable' }}</span>
+        {% if course.total_section is not none %}<span>{{ course.total_section }} sections</span>{% endif %}
+        {% if course.badge %}<span class="status">{{ course.badge }}</span>{% endif %}
+      </div>
+    </div>
+    <figure class="course-hero-media">
+      <img src="{{ course.blob_path or '/static/placeholder.svg' }}" alt="Cover {{ course.title }}" width="640" height="360" fetchpriority="high" decoding="async" data-cover>
+      {% if course.is_expired %}<span class="status status-expired course-hero-badge">Coupon expired</span>{% elif course.coupon_code and coupon_fresh %}<span class="status course-hero-badge">Free coupon</span>{% endif %}
+    </figure>
+  </div>
+</section>
 {% if error %}<p class="notice" role="alert">{{ error }} The coupon could not be verified. <a href="{{ request.url.path }}">Try again</a>.</p>{% endif %}
 <div class="detail-layout">
   <article class="detail-main min-w-0">
-    <p class="course-category">{{ course.category }}</p>
-    <h1>{{ course.title }}</h1>
-    <p class="detail-instructor muted">By {{ course.instructor or 'Instructor unavailable' }}</p>
-    <div class="detail-metadata flex flex-wrap items-center gap-4">
-      <span class="flex items-center gap-1">{{ icon('star', 16) }}{{ '%.1f'|format(course.rate) if course.rate else 'Not rated' }}</span>
-      {% if course.total_hour is not none %}<span class="flex items-center gap-1">{{ icon('clock', 16) }}{{ '%g'|format(course.total_hour) }} hr</span>{% endif %}
-      <span class="flex items-center gap-1">{{ icon('globe', 16) }}{{ course.language or 'Language unavailable' }}</span>
-      {% if course.total_section is not none %}<span>{{ course.total_section }} sections</span>{% endif %}
-      {% if course.badge %}<span class="status">{{ course.badge }}</span>{% endif %}
-    </div>
-    <img class="detail-cover" src="{{ course.blob_path or '/static/placeholder.svg' }}" alt="Cover {{ course.title }}" width="640" height="360" loading="lazy" decoding="async" data-cover>
-    <section class="detail-section"><h2>About this course</h2><p class="prose-text">{{ course.description or 'Description unavailable.' }}</p></section>
+    <section class="detail-section"><h2>About this course</h2>{{ course_text(course.description or 'Description unavailable.') }}</section>
     {% if course.is_practice_test %}<section class="detail-section"><h2>Practice tests</h2><p>{{ course.total_practice_test }} practice tests with {{ course.total_practice_test_questions }} questions.</p></section>{% endif %}
     {% for title, items in [('What you will learn', course.learn_who), ('Who this course is for', course.for_who), ('Requirements', course.requirements)] %}
     {% if items %}<section class="detail-section"><h2>{{ title }}</h2><ul class="detail-list">{% for item in items %}<li>{{ item }}</li>{% endfor %}</ul></section>{% endif %}
     {% endfor %}
-    {% if course.moreinfo %}<section class="detail-section"><h2>Additional information</h2><p class="prose-text">{{ course.moreinfo }}</p></section>{% endif %}
+    {% if course.moreinfo %}<section class="detail-section"><h2>Additional information</h2>{{ course_text(course.moreinfo) }}</section>{% endif %}
   </article>
   <aside class="enroll-panel">
     {% if course.is_expired %}<span class="status status-expired">Expired</span><h2>Coupon expired</h2><p class="muted">Find another course or check back for updated offers.</p>

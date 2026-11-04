@@ -2,11 +2,11 @@
 
 Katalog kursus untuk orang yang ingin memilih topik, memeriksa kupon, dan melanjutkan belajar. Pertanyaan utama layar: kursus apa yang sesuai dengan pencarian dan kategori saya?
 
-Arah visual memakai Accent ladder dari Design Taste, seed 477850068. Ground terang dengan sedikit tint merah muda, teks arang, dan aksen raspberry pada pilihan aktif. Cover kursus asli menjadi identitas visual utama. Tidak ada statistik, ulasan, atau kursus rekaan pada katalog kosong.
+Arah visual memakai Accent ladder dari Design Taste, seed 477850068. Ground putih hangat, teks arang, dan aksen oranye pada pilihan aktif. Cover kursus asli menjadi identitas visual utama. Tidak ada statistik, ulasan, atau kursus rekaan pada katalog kosong.
 
 ENERGY 1 / RHYTHM 2 / MOTION 1.
 
-- Warna raspberry membedakan filter aktif, kupon, dan tindakan utama; permukaan tetap terang agar cover mudah dibandingkan.
+- Warna oranye membedakan filter aktif, kupon, dan tindakan utama; permukaan tetap terang agar cover mudah dibandingkan.
 - DM Sans dipilih untuk judul kursus panjang dan metadata kecil yang tetap terbaca; fallback memakai font sistem saat CDN tidak tersedia.
 - Sidebar kategori menjaga 13 kategori terlihat pada desktop. Disclosure kategori menyingkat kontrol pada ponsel.
 - Grid kartu dipakai karena objek yang dibandingkan mempunyai jenis informasi setara: cover, judul, instruktur, rating, durasi, bahasa, dan status.
@@ -29,12 +29,16 @@ Inspector allowances: `eyebrow` salah mendeteksi label kategori cover sebagai ey
 
 Navbar mengikuti referensi bersamateknologiunggul.id yang diperiksa langsung pada 1 November 2026: kapsul mengambang dengan lebar maksimum 940px, permukaan gelap transparan, menu aktif membulat, dan tombol terang di kanan. Menu Coursemy tetap Home dan Courses; tombol Cari kursus membuka input pencarian katalog. Di ponsel, disclosure native menyediakan hamburger, mendukung Escape dan klik di luar untuk menutup, serta tetap berfungsi tanpa JavaScript. Permukaan transparan dan backdrop blur membantu keterbacaan navbar ketika konten bergulir di belakangnya. Tema halaman tetap mengikuti identitas Coursemy.
 
-Navbar menyembunyikan diri ke atas saat scroll turun setelah 100px, lalu muncul kembali saat scroll naik atau kembali ke awal halaman. Ambang perpindahan 12px menghindari perubahan akibat scroll kecil. Animasi transform 350ms tidak mengubah tata letak konten. Menu terbuka dan fokus keyboard menjaga navbar terlihat; reduced motion menonaktifkan transisi.
+Navbar selalu terlihat saat halaman digulir. Jarak 16px di desktop dan 12px di ponsel memisahkan kapsul dari tepi atas, sementara posisi sticky menjaga navigasi tetap terjangkau. Reduced motion menonaktifkan transisi.
 
 ## Tema dan perilaku navbar terbaru
 
-Navbar memakai permukaan kaca yang mengikuti tema (opacity 72%, blur 24px). Pemilih Light/Dark/System menggantikan tombol Cari kursus dan menyimpan pilihan di localStorage; System mengikuti perubahan preferensi perangkat. Tema diterapkan sebelum stylesheet dimuat untuk menghindari kilatan warna. Dark mode memetakan token permukaan, teks, border, dan aksen, termasuk katalog dan detail kursus.
+Navbar memakai permukaan kaca yang mengikuti tema (opacity 90%, blur 24px). Pemilih Light/Dark/System menggantikan tombol Cari kursus dan menyimpan pilihan di localStorage; System mengikuti perubahan preferensi perangkat. Tema diterapkan sebelum stylesheet dimuat untuk menghindari kilatan warna. Dark mode memetakan token permukaan, teks, border, dan aksen, termasuk katalog dan detail kursus.
 
-Animasi pembukaan dan hover zoom hero dihapus. Konten teratas dirapatkan melalui pengurangan jarak setelah navbar serta padding judul katalog. Navbar tetap bersembunyi ketika scroll turun dan muncul ketika scroll naik, serta otomatis muncul setelah 2 detik tanpa scroll. Gerakan tidak mengubah tinggi atau alur tata letak halaman.
+Animasi pembukaan dan hover zoom hero dihapus. Konten teratas dirapatkan melalui pengurangan jarak setelah navbar serta padding judul katalog. Navbar tetap menempel di atas dan tidak lagi bersembunyi saat scroll. Gerakan tidak mengubah tinggi atau alur tata letak halaman.
 
 Pemilih tema kini berupa tiga tombol ikon SVG (matahari, bulan, monitor) dengan aria-label, title, dan aria-pressed untuk pilihan aktif. Hero memakai min-height berdasarkan 100svh setelah area navbar, dengan tinggi mosaik dan ukuran judul adaptif. Layar kecil tetap dapat bertambah tinggi jika kontennya memerlukan ruang, tanpa memotong konten. Pemeriksaan browser pada 1440×900, 1366×768, 768×1024, 390×844, dan 320×640 memastikan pencarian terlihat serta tidak ada overflow halaman atau navbar.
+
+Logo header terbaru memakai buku terbuka pada bidang oranye lembut (#D77B43), bersama nama Coursemy tanpa subtitle. Aset SVG yang sama dipakai pada favicon dan header bersama untuk beranda, katalog, dan detail kursus. Navbar kini bersembunyi saat scroll turun melewati area atas dan muncul saat scroll naik; ambang 8px meredam perubahan kecil. Menu mobile terbuka dan fokus keyboard menjaga navigasi terlihat. Reduced motion menonaktifkan transisi. Pemeriksaan browser beranda dan katalog pada lebar 1440, 390, dan 320px memastikan logo tampil, tata letak tidak overflow, serta perilaku scroll turun/naik berjalan.
+
+Navbar terbaru mengikuti alur halaman dengan position relative: langsung ikut bergulir tanpa sticky, ambang scroll, atau animasi sembunyi. Perubahan ini menggantikan perilaku scroll navbar sebelumnya.

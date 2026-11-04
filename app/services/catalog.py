@@ -12,6 +12,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 
 from app.config import Settings
 from app.models import CatalogMeta, Course, SavedCourse, utcnow
@@ -196,35 +197,82 @@ async def upsert_records(db: Session, upstream: Upstream, settings: Settings, re
             return await download_cover(upstream.client, record["image_url"], record["id"], settings.blob_dir)
 
     covers = await asyncio.gather(*(cover(record) for record in values))
-    for record, blob in zip(values, covers):
-        existing = db.scalar(select(Course).where(or_(Course.id == record["id"], Course.slug == record["slug"])))
-        if existing:
-            record["id"] = existing.id
-        # Keep the last local cover if a replacement download fails.
-        record["blob_path"] = blob or (existing.blob_path if existing else None)
-        insert = sqlite_insert if db.bind.dialect.name == "sqlite" else pg_insert
-        statement = insert(Course).values(**record)
-        statement = statement.on_conflict_do_update(index_elements=[Course.id], set_={key: value for key, value in record.items() if key != "id"})
-        db.execute(statement)
-    db.commit()
-    db.expire_all()
+    await run_in_threadpool(_store_records, db, values, covers)
     return len(values)
 
 
+def _store_records(db: Session, values: list[dict], covers: list[str | None]):
+    if not values:
+        db.commit()
+        db.expire_all()
+        return
+    rows = db.execute(select(Course.id, Course.slug, Course.blob_path).where(or_(
+        Course.id.in_([record["id"] for record in values]),
+        Course.slug.in_([record["slug"] for record in values]),
+    ))).mappings().all()
+    by_id = {row["id"]: row for row in rows}
+    by_slug = {row["slug"]: row for row in rows}
+    insert = sqlite_insert if db.bind.dialect.name == "sqlite" else pg_insert
+    for record, blob in zip(values, covers):
+        id_match = by_id.get(record["id"])
+        slug_match = by_slug.get(record["slug"])
+        existing = id_match or slug_match
+        if id_match and slug_match and id_match["id"] != slug_match["id"]:
+            # Preserve the database's match order for conflicting source identities.
+            existing = db.execute(select(Course.id, Course.slug, Course.blob_path).where(or_(
+                Course.id == record["id"], Course.slug == record["slug"],
+            ))).mappings().first()
+        if existing:
+            record["id"] = existing["id"]
+        # Keep the last local cover if a replacement download fails.
+        record["blob_path"] = blob or (existing["blob_path"] if existing else None)
+        statement = insert(Course).values(**record)
+        statement = statement.on_conflict_do_update(index_elements=[Course.id], set_={key: value for key, value in record.items() if key != "id"})
+        db.execute(statement)
+        if existing:
+            by_slug.pop(existing["slug"], None)
+        stored = {key: record[key] for key in ("id", "slug", "blob_path")}
+        by_id[stored["id"]] = by_slug[stored["slug"]] = stored
+    db.commit()
+    db.expire_all()
+
+
+def _commit_meta(db: Session, values: dict):
+    for key, value in values.items():
+        set_meta(db, key, value)
+    db.commit()
+
+
+def _start_sync(db: Session, cooldown: int):
+    last_attempt = meta(db, "refresh_attempted_at")
+    if cooldown and last_attempt:
+        remaining = cooldown - (utcnow() - datetime.fromisoformat(last_attempt)).total_seconds()
+        if remaining > 0:
+            raise RefreshThrottled(math.ceil(remaining))
+    _commit_meta(db, {"refresh_attempted_at": utcnow().isoformat(), "sync_state": "running", "last_error": ""})
+
+
+def _sync_progress(db: Session, kind: str, total: int, processed: int, token: str):
+    set_meta(db, f"upstream_total:{kind}", total)
+    _commit_meta(db, {
+        "upstream_total": sum(int(meta(db, f"upstream_total:{name}", "0")) for name in ("practice", "courses")),
+        "sync_progress": processed, "sync_lock": token,
+    })
+
+
+def _sync_failed(db: Session, exc: Exception):
+    db.rollback()
+    _commit_meta(db, {
+        "sync_state": "error",
+        "last_error": str(exc) if isinstance(exc, UpstreamError) else "Sync failed; the cached catalog is still available.",
+    })
+
+
 async def sync_catalog(db: Session, upstream: Upstream, settings: Settings, full: bool = False) -> RefreshResult:
-    token = acquire_lock(db)
+    token = await run_in_threadpool(acquire_lock, db)
     processed, total = 0, 0
     try:
-        last_attempt = meta(db, "refresh_attempted_at")
-        cooldown = settings.refresh_cooldown_seconds
-        if cooldown and last_attempt:
-            remaining = cooldown - (utcnow() - datetime.fromisoformat(last_attempt)).total_seconds()
-            if remaining > 0:
-                raise RefreshThrottled(math.ceil(remaining))
-        set_meta(db, "refresh_attempted_at", utcnow().isoformat())
-        set_meta(db, "sync_state", "running")
-        set_meta(db, "last_error", "")
-        db.commit()
+        await run_in_threadpool(_start_sync, db, settings.refresh_cooldown_seconds)
         for kind in ("practice", "courses"):
             page, seen = 1, set()
             while True:
@@ -234,11 +282,7 @@ async def sync_catalog(db: Session, upstream: Upstream, settings: Settings, full
                     raise UpstreamError("The source stopped pagination before the catalog was complete.")
                 processed += await upsert_records(db, upstream, settings, records)
                 seen.update(ids)
-                set_meta(db, f"upstream_total:{kind}", kind_total)
-                set_meta(db, "upstream_total", sum(int(meta(db, f"upstream_total:{name}", "0")) for name in ("practice", "courses")))
-                set_meta(db, "sync_progress", processed)
-                set_meta(db, "sync_lock", token)
-                db.commit()
+                await run_in_threadpool(_sync_progress, db, kind, kind_total, processed, token)
                 if not full or len(seen) >= kind_total:
                     break
                 page += 1
@@ -246,11 +290,10 @@ async def sync_catalog(db: Session, upstream: Upstream, settings: Settings, full
                     raise UpstreamError("The upstream pagination safety limit was exceeded.")
             total += kind_total
         now = utcnow()
-        set_meta(db, "refreshed_at", now.isoformat())
+        metadata = {"refreshed_at": now.isoformat(), "sync_state": "idle"}
         if full:
-            set_meta(db, "full_refreshed_at", now.isoformat())
-        set_meta(db, "sync_state", "idle")
-        db.commit()
+            metadata["full_refreshed_at"] = now.isoformat()
+        await run_in_threadpool(_commit_meta, db, metadata)
         return RefreshResult(
             message=f"Refreshed {'full catalog' if full else 'page 1'} - {processed} courses, {total} total in the catalog",
             refreshed_at=now, count=processed, total=total, mode="full" if full else "page",
@@ -258,32 +301,27 @@ async def sync_catalog(db: Session, upstream: Upstream, settings: Settings, full
     except RefreshThrottled:
         raise
     except Exception as exc:
-        db.rollback()
-        set_meta(db, "sync_state", "error")
-        set_meta(db, "last_error", str(exc) if isinstance(exc, UpstreamError) else "Sync failed; the cached catalog is still available.")
-        db.commit()
+        await run_in_threadpool(_sync_failed, db, exc)
         raise
     finally:
-        release_lock(db, token)
+        await run_in_threadpool(release_lock, db, token)
 
 
 async def ensure_category(db: Session, upstream: Upstream, settings: Settings, category: str):
     key = f"category:{category}"
-    stamp = meta(db, key)
+    stamp = await run_in_threadpool(meta, db, key)
     if stamp and datetime.fromisoformat(stamp) > utcnow() - timedelta(days=1):
         return
-    token = acquire_lock(db)
+    token = await run_in_threadpool(acquire_lock, db)
     try:
         records = await upstream.category(category)
         # Commit small batches so an interrupted refresh retains useful cache data.
         for start in range(0, len(records), 15):
             await upsert_records(db, upstream, settings, records[start:start + 15], detail=True)
-            set_meta(db, "sync_lock", token)
-            db.commit()
-        set_meta(db, key, utcnow().isoformat())
-        db.commit()
+            await run_in_threadpool(_commit_meta, db, {"sync_lock": token})
+        await run_in_threadpool(_commit_meta, db, {key: utcnow().isoformat()})
     finally:
-        release_lock(db, token)
+        await run_in_threadpool(release_lock, db, token)
 
 
 async def ensure_detail(db: Session, upstream: Upstream, settings: Settings, course: Course) -> Course:
@@ -294,7 +332,7 @@ async def ensure_detail(db: Session, upstream: Upstream, settings: Settings, cou
         raise UpstreamError("The source details do not match the selected course.")
     course_id = course.id
     await upsert_records(db, upstream, settings, [raw], detail=True)
-    return db.get(Course, course_id)
+    return await run_in_threadpool(db.get, Course, course_id)
 
 
 def find_course(db: Session, slug: str) -> Course | None:
@@ -323,6 +361,64 @@ def query_courses(db: Session, *, page=1, q="", category=None, sort="latest", hi
     return PaginatedCourses(courses=courses, count=count, page=page, total_pages=total_pages)
 
 
+# Function words that betray a non-English listing even when upstream reports "English".
+_NON_ENGLISH_WORDS = frozenset({
+    "und", "der", "die", "das", "für", "mit", "ohne", "dich", "dein", "eine", "einen", "nicht",
+    "le", "les", "des", "une", "pour", "dans", "avec", "sur", "aux", "est", "vous",
+    "los", "las", "para", "con", "por", "una", "del", "como",
+})
+
+# "… (Arabic Language)" style listings belong in the catalogue, not the English-language shelf.
+_FOREIGN_LANGUAGE_TAGS = ("arabic", "german", "french", "spanish", "hindi", "portuguese", "italian",
+                          "polish", "turkish", "urdu", "vietnamese", "tamil", "malay", "indonesian")
+
+
+def _readable_listing(course: Course) -> bool:
+    title = course.title or ""
+    if not title.isascii() or not 12 <= len(title) <= 80:
+        return False
+    lowered = title.lower()
+    if any(tag in lowered for tag in _FOREIGN_LANGUAGE_TAGS):
+        return False
+    words = [word.strip(".,:;!?()[]'\"").lower() for word in title.split()]
+    return sum(word in _NON_ENGLISH_WORDS for word in words) < 2
+
+
+def landing_featured(db: Session, *, limit: int = 4) -> list[Course]:
+    """Shelf-worthy courses: newest readable English listings, one per instructor."""
+    candidates = db.scalars(
+        select(Course)
+        .where(Course.is_expired.is_(False), Course.is_practice_test.is_(False),
+               Course.language == "English", Course.blob_path.is_not(None))
+        .order_by(Course.created_at.desc(), Course.id.desc())
+        .limit(300)
+    ).all()
+    featured, instructors = [], set()
+    for course in candidates:
+        if course.instructor in instructors or not _readable_listing(course):
+            continue
+        featured.append(course)
+        instructors.add(course.instructor)
+        if len(featured) == limit:
+            break
+    if featured:
+        rated = max(featured, key=lambda course: course.rate or 0)
+        if (rated.rate or 0) > 0 and rated is not featured[0]:
+            featured.remove(rated)
+            featured.insert(0, rated)
+    return featured
+
+
+def category_counts(db: Session) -> list[tuple[str, int]]:
+    """Courses per category, largest first. Empty categories sink to the end."""
+    counted = dict(db.execute(
+        select(Course.category, func.count(Course.id))
+        .where(Course.is_practice_test.is_(False), Course.category.is_not(None))
+        .group_by(Course.category)
+    ).all())
+    return sorted(((name, counted.get(name, 0)) for name in CATEGORIES), key=lambda item: item[1], reverse=True)
+
+
 def related_courses(db: Session, course: Course):
     return db.scalars(select(Course).where(Course.category == course.category, Course.id != course.id).order_by(Course.created_at.desc(), Course.id.desc()).limit(3)).all()
 
@@ -332,9 +428,10 @@ def saved_ids(db: Session, visitor_id: str) -> set[int]:
 
 
 def catalog_stats(db: Session, visitor_id: str) -> StatsOut:
-    total, active, practice_tests = db.execute(select(
+    total, active, courses, practice_tests = db.execute(select(
         func.count(Course.id),
         func.count(Course.id).filter(Course.is_expired.is_(False)),
+        func.count(Course.id).filter(Course.is_practice_test.is_(False)),
         func.count(Course.id).filter(Course.is_practice_test.is_(True)),
     )).one()
     metadata = dict(db.execute(select(CatalogMeta.key, CatalogMeta.value).where(CatalogMeta.key.in_(
@@ -342,7 +439,7 @@ def catalog_stats(db: Session, visitor_id: str) -> StatsOut:
     ))).all())
     return StatsOut(
         total=total, upstream_total=int(metadata.get("upstream_total", "0")),
-        active=active, practice_tests=practice_tests,
+        active=active, courses=courses, practice_tests=practice_tests,
         saved=db.scalar(select(func.count(SavedCourse.id)).where(SavedCourse.visitor_id == visitor_id)) or 0,
         refreshed_at=metadata.get("refreshed_at"), full_refreshed_at=metadata.get("full_refreshed_at"),
         sync_state=metadata.get("sync_state", "idle"), last_error=metadata.get("last_error") or None,

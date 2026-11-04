@@ -8,7 +8,7 @@ from app.config import get_settings
 import app.main as main_module
 
 
-def test_catalog_schedule_every_half_hour_from_midnight(database, monkeypatch):
+def test_catalog_schedule_every_quarter_hour_from_midnight(database, monkeypatch):
     schedulers = []
 
     class CapturedScheduler(BackgroundScheduler):
@@ -28,8 +28,8 @@ def test_catalog_schedule_every_half_hour_from_midnight(database, monkeypatch):
         midnight = datetime(2026, 11, 2, tzinfo=ZoneInfo("Asia/Jakarta"))
         previous = None
         now = midnight - timedelta(seconds=1)
-        for index in range(49):
+        for index in range(97):
             upcoming = job.trigger.get_next_fire_time(previous, now)
-            assert upcoming == midnight + timedelta(minutes=30 * index)
+            assert upcoming == midnight + timedelta(minutes=15 * index)
             previous = upcoming
             now = upcoming + timedelta(seconds=1)

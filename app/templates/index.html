@@ -1,12 +1,20 @@
 {% extends 'base.html' %}
 {% block body_class %}courses-page{% endblock %}
 {% block content %}
-<section class="page-heading flex flex-wrap items-start justify-between gap-6">
-  <div>
-    <h1>Discover Free Courses</h1>
-    <p class="intro">Find something you want to learn. Choose a course, check its coupon, and get started.</p>
+<section class="page-hero catalog-hero" aria-labelledby="catalog-title">
+  <div class="page-hero-inner catalog-hero-inner">
+    <div class="catalog-hero-copy">
+      <h1 id="catalog-title" class="catalog-hero-title">The course<br>catalog</h1>
+    </div>
+    <div class="catalog-hero-note">
+      <p>Every free Udemy course in one place. Filter by field, check the coupon, and enroll in minutes.</p>
+      <dl class="catalog-hero-stats">
+        <div><dt>Free courses</dt><dd>{{ '{:,}'.format(stats.courses) }}</dd></div>
+        <div><dt>Fields</dt><dd>{{ categories|length }}</dd></div>
+        <div><dt>Practice tests</dt><dd>{{ '{:,}'.format(stats.practice_tests) }}</dd></div>
+      </dl>
+    </div>
   </div>
-  <button type="button" class="btn refresh-open" data-refresh>{{ icon('refresh', 16) }}Refresh catalog</button>
 </section>
 <form id="filters" action="/courses" method="get"
   hx-get="/courses" hx-target="#results" hx-push-url="true" hx-indicator="#catalog-loading"
@@ -26,12 +34,15 @@
       <div class="sidebar-note">{{ icon('info', 16) }}<p>Coupons expire. Check the details before enrolling.</p></div>
     </aside>
     <div class="catalog-content min-w-0">
+      <div class="catalog-tabs-row">
       <fieldset class="course-tabs flex items-center gap-6">
         <legend class="sr-only">Course type</legend>
         <label class="tab-choice"><input class="kind-input" type="radio" name="kind" value="courses" {% if filters.kind == 'courses' %}checked{% endif %}><span>{{ icon('book', 16) }}Courses</span></label>
         <label class="tab-choice"><input class="kind-input" type="radio" name="kind" value="practice" {% if filters.kind == 'practice' %}checked{% endif %}><span>{{ icon('check', 16) }}Practice Tests</span></label>
         <label class="tab-choice"><input class="kind-input" type="radio" name="kind" value="saved" {% if filters.kind == 'saved' %}checked{% endif %}><span>{{ icon('bookmark', 16) }}Saved Courses</span></label>
+        <button type="button" class="btn refresh-open" data-refresh>{{ icon('refresh', 16) }}Refresh catalog</button>
       </fieldset>
+      </div>
       <div class="filter-toolbar flex flex-wrap items-end gap-4">
         <div class="search-control">
           <label for="q">Find courses</label>

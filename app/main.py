@@ -52,7 +52,7 @@ async def lifespan(app: FastAPI):
         app.state.upstream = Upstream(client, str(settings.upstream_api_base))
         if settings.scheduler_enabled:
             scheduler = BackgroundScheduler(timezone="Asia/Jakarta")
-            scheduler.add_job(scheduled_sync, "cron", minute="0,30", id="catalog", max_instances=1, coalesce=True, misfire_grace_time=1800)
+            scheduler.add_job(scheduled_sync, "cron", minute="0,15,30,45", id="catalog", max_instances=1, coalesce=True, misfire_grace_time=1800)
             scheduler.start()
         if settings.initial_sync_enabled:
             with SessionLocal() as db:

@@ -162,3 +162,62 @@ def test_catalog_statistics_use_three_queries(populated, database):
     assert stats.total == 16 and stats.active == 15 and stats.practice_tests == 1
     assert stats.saved == 0
     assert len(queries) == 3
+
+
+def test_upsert_fetches_existing_courses_once_per_batch_off_event_loop(database, remote):
+    import threading
+    from sqlalchemy import event
+
+    reads, database_threads = [], []
+    loop_thread = threading.get_ident()
+
+    def capture(connection, cursor, statement, parameters, context, executemany):
+        database_threads.append(threading.get_ident())
+        if statement.lstrip().upper().startswith("SELECT"):
+            reads.append(statement)
+
+    with database() as db:
+        event.listen(db.bind, "before_cursor_execute", capture)
+        try:
+            for _ in range(2):
+                reads.clear()
+                count = asyncio.run(upsert_records(db, remote[0], get_settings(), [record(i) for i in range(1, 16)]))
+                assert count == 15
+                assert len(reads) == 1
+        finally:
+            event.remove(db.bind, "before_cursor_execute", capture)
+        assert db.scalar(select(func.count(Course.id))) == 15
+    assert database_threads and loop_thread not in database_threads
+
+
+def test_upsert_preserves_identity_details_and_cover_when_source_id_changes(database, remote, monkeypatch):
+    import app.services.catalog as catalog
+
+    async def missing_cover(*args):
+        return None
+
+    with database() as db:
+        asyncio.run(upsert_records(db, remote[0], get_settings(), [record(1, detail=True)], detail=True))
+        original_cover = db.get(Course, 1).blob_path
+        monkeypatch.setattr(catalog, "download_cover", missing_cover)
+        changed = {**record(1), "id": 101, "title": "Updated course"}
+        asyncio.run(upsert_records(db, remote[0], get_settings(), [changed]))
+        course = db.get(Course, 1)
+        assert course.title == "Updated course"
+        assert course.blob_path == original_cover
+        assert course.coupon_code == "TEST-1" and course.total_section == 6
+        assert db.get(Course, 101) is None
+
+
+def test_upsert_handles_repeated_and_renamed_courses_within_one_batch(database, remote):
+    with database() as db:
+        first = record(1)
+        renamed = {**first, "slug": "course/renamed-course", "title": "Renamed course"}
+        reused = {**first, "id": 2, "title": "Another course"}
+        duplicate = {**renamed, "id": 3, "title": "Last update wins"}
+        asyncio.run(upsert_records(db, remote[0], get_settings(), [first, renamed, reused, duplicate]))
+        assert db.scalar(select(func.count(Course.id))) == 2
+        assert db.get(Course, 1).title == "Last update wins"
+        assert db.get(Course, 1).slug == "course/renamed-course"
+        assert db.get(Course, 2).slug == first["slug"]
+        assert db.get(Course, 3) is None

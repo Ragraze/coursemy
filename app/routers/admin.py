@@ -9,6 +9,5 @@ router = APIRouter(prefix="/api/catalog", tags=["Administration"])
 
 
 @router.post("/refresh", response_model=RefreshResult)
-@router.post("/refreshCourses", response_model=RefreshResult, deprecated=True)
 async def refresh(db: DB, upstream: Remote, full: bool = False):
     return await sync_catalog(db, upstream, get_settings(), full=full)

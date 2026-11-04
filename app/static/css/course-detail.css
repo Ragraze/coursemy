@@ -1,0 +1,12 @@
+.course-page .detail-section{margin-top:36px;padding-top:28px;border-top:1px solid var(--border)}
+.course-page .detail-main>.detail-section:first-child{margin-top:0;padding-top:0;border-top:0}
+.course-page .detail-section h2{margin-bottom:18px;font-size:22px}
+.course-page .course-prose,.course-page .detail-list{max-width:72ch;color:var(--muted);font-size:15px;line-height:1.8;overflow-wrap:anywhere}
+.course-page .course-prose>*+*{margin-top:16px}
+.course-page .course-prose h3{margin-top:24px;color:var(--text);font-size:16px;line-height:1.5}
+.course-page .course-prose>h3:first-child{margin-top:0}
+.course-page .detail-list{display:grid;gap:12px;margin-bottom:0;padding-left:24px;list-style:disc outside}
+.course-page ol.detail-list{list-style-type:decimal}
+.course-page .detail-list li{padding-left:4px}
+.course-page .detail-list li::marker{color:var(--accent-ink);font-weight:600}
+@media(max-width:720px){.course-page .detail-section{margin-top:28px;padding-top:24px}.course-page .detail-section h2{font-size:20px}.course-page .detail-list{gap:10px}}

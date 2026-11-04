@@ -1,32 +1,112 @@
 {% extends 'base.html' %}
-{% block title %}Coursemy · Room for curiosity{% endblock %}
+{% block title %}Coursemy · Free Udemy courses, ready when you are{% endblock %}
 {% block body_class %}landing-page{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="/static/css/landing.css"><link rel="stylesheet" href="/static/css/hero.css">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="/static/css/landing.css?v=3"><link rel="stylesheet" href="/static/css/hero.css?v=3"><script src="/static/js/landing.js" defer></script>{% endblock %}
 {% block content %}
 <section class="landing-hero" aria-labelledby="hero-title">
-  <div class="learning-mosaic" aria-label="Courses on Coursemy">
-    <div class="mosaic-message"><span>Always<br>something<br>to learn.</span><span class="mosaic-mark" aria-hidden="true">c.</span></div>
-    {% for course in featured[:4] %}
-    <a class="mosaic-course mosaic-course-{{ loop.index }}" href="/course/{{ course.slug_part|urlquote }}" aria-label="View course {{ course.title }}">
-      <img src="{{ course.blob_path or '/static/placeholder.svg' }}" alt="{{ course.title }}" width="640" height="360" fetchpriority="{{ 'high' if loop.first else 'auto' }}" data-cover>
-      <span>{{ course.category or 'View course' }}</span>
-    </a>
-    {% else %}<div class="mosaic-empty"><p>Your next topic<br>is waiting.</p><a href="/courses">Browse courses</a></div>{% endfor %}
-  </div>
-  <div class="hero-editorial">
-    <div class="hero-aside"><p>Room for<br>curiosity.</p><a href="/courses" class="hero-catalog-link">Browse courses {{ icon('arrow', 20) }}</a></div>
-    <div class="hero-copy"><h1 id="hero-title">Learn more.<br>Go further.</h1><p class="hero-description">Find Udemy courses with free coupons, from your first skill to your next career move.</p>
-      <form class="hero-search" action="/courses" method="get" role="search"><label class="sr-only" for="hero-query">What you want to learn</label>{{ icon('search', 21) }}<input id="hero-query" type="search" name="q" maxlength="300" placeholder="What will you learn today?"><button type="submit">Find courses</button></form>
-      <div class="hero-suggestions"><span>Try:</span>{% for topic in ['Python', 'Excel', 'Design'] %}<a href="/courses?q={{ topic }}">{{ topic }}</a>{% endfor %}</div>
+  <h1 id="hero-title" class="hero-title">
+    <span class="hero-line">Learn today.</span>
+    <span class="hero-line hero-line-second"><span>Build tomorrow.</span></span>
+  </h1>
+  <div class="hero-foot">
+    <div class="hero-intro">
+      <p class="hero-description">Free Udemy courses, updated continuously. Pick a topic, check the coupon, and enroll in minutes.</p>
+      <p class="hero-facts"><strong>{{ '{:,}'.format(stats.courses) }}</strong> free courses <span aria-hidden="true">·</span> <strong>{{ categories|length }}</strong> categories <span aria-hidden="true">·</span> no account needed</p>
+    </div>
+    <div class="hero-actions">
+      <form class="hero-search" action="/courses" method="get" role="search">
+        <label class="sr-only" for="hero-query">What you want to learn</label>
+        {{ icon('search', 21) }}
+        <input id="hero-query" type="search" name="q" maxlength="300" placeholder="What will you learn today?">
+        <button type="submit">Find courses</button>
+      </form>
+      <div class="hero-suggestions"><span>Try</span>{% for topic in ['Python', 'Excel', 'Design'] %}<a href="/courses?q={{ topic }}">{{ topic }}</a>{% endfor %}</div>
     </div>
   </div>
 </section>
+
 <section class="landing-discover" aria-labelledby="discover-title">
-  <div class="discover-heading"><h2 id="discover-title">Follow your<br> curiosity.</h2><p>One topic can open many doors. Pick a field and find a course to get started.</p></div>
-  <div class="topic-index">{% for topic in categories %}<a href="/courses?category={{ topic|urlquote }}"><span>{{ topic }}</span>{{ icon('chevron', 18) }}</a>{% endfor %}</div>
+  <div class="discover-heading" data-reveal>
+    <h2 id="discover-title">Follow your<br>curiosity.</h2>
+    <p>{{ category_counts|length }} fields, {{ '{:,}'.format(stats.courses) }} free courses. Start with the one you keep coming back to.</p>
+  </div>
+  <div class="topic-column">
+    <nav class="topic-index" aria-label="Course categories">
+      {% for topic, count in category_counts[:6] %}
+      <a href="/courses?category={{ topic|urlquote }}" data-reveal>
+        <span class="topic-name">{{ topic }}</span>
+        <span class="topic-count">{{ '{:,}'.format(count) }}</span>
+        {{ icon('chevron', 18) }}
+      </a>
+      {% endfor %}
+    </nav>
+    {% if category_counts|length > 6 %}
+    <details class="topic-more">
+      <summary>All {{ category_counts|length }} categories {{ icon('chevron', 18) }}</summary>
+      <nav class="topic-index" aria-label="All course categories">
+        {% for topic, count in category_counts[6:] %}
+        <a href="/courses?category={{ topic|urlquote }}"><span class="topic-name">{{ topic }}</span><span class="topic-count">{{ '{:,}'.format(count) }}</span>{{ icon('chevron', 18) }}</a>
+        {% endfor %}
+      </nav>
+    </details>
+    {% endif %}
+  </div>
 </section>
+
 {% if featured %}
-<section class="landing-featured" aria-labelledby="featured-title"><div class="featured-heading"><h2 id="featured-title">Start here.</h2><a href="/courses">View all courses {{ icon('chevron', 18) }}</a></div><div class="course-grid">{% for course in featured[:3] %}{% include 'partials/course_card.html' %}{% endfor %}</div></section>
+<section class="landing-featured" aria-labelledby="featured-title">
+  <div class="featured-heading" data-reveal>
+    <div class="featured-heading-copy">
+      <h2 id="featured-title">Start here.</h2>
+      <p class="featured-sub">Newest first. Coupons can expire — the course page tells you whether yours is still live.</p>
+    </div>
+    <a href="/courses">All {{ '{:,}'.format(stats.courses) }} courses {{ icon('chevron', 18) }}</a>
+  </div>
+  <div class="featured-layout">
+    {% set lead = featured[0] %}
+    <article class="featured-lead" data-reveal>
+      <a class="featured-lead-link" href="/course/{{ lead.slug_part|urlquote }}">
+        <span class="featured-lead-cover"><img src="{{ lead.blob_path or '/static/placeholder.svg' }}" alt="{{ lead.title }}" width="640" height="360" loading="lazy" decoding="async" data-cover></span>
+        <span class="featured-lead-copy">
+          <span class="featured-lead-title">{{ lead.title|truncate(52, False, '…') }}</span>
+          <span class="featured-byline"><span class="featured-category">{{ lead.category or 'Course' }}</span><span class="featured-instructor muted">{{ lead.instructor or 'Instructor unavailable' }}</span></span>
+          <span class="featured-meta muted">
+            <span class="flex items-center gap-1">{{ icon('star', 15) }}{{ '%.1f'|format(lead.rate) if lead.rate else 'Not rated' }}</span>
+            {% if lead.is_practice_test %}<span>{{ lead.total_practice_test }} tests · {{ lead.total_practice_test_questions }} questions</span>{% elif lead.total_hour is not none %}<span class="flex items-center gap-1">{{ icon('clock', 15) }}{{ '%g'|format(lead.total_hour) }} hr</span>{% endif %}
+            <span class="flex items-center gap-1">{{ icon('globe', 15) }}{{ lead.language or 'Language unavailable' }}</span>
+          </span>
+        </span>
+      </a>
+      <button type="button" class="save-button featured-save {% if lead.id in saved_ids %}is-saved{% endif %}" data-save="{{ lead.id }}" aria-label="{% if lead.id in saved_ids %}Remove bookmark{% else %}Save course{% endif %}: {{ lead.title }}" data-title="{{ lead.title }}" aria-pressed="{{ 'true' if lead.id in saved_ids else 'false' }}">{{ icon('bookmark', 18) }}</button>
+    </article>
+    <div class="featured-list">
+      {% for course in featured[1:4] %}
+      <a class="featured-row" href="/course/{{ course.slug_part|urlquote }}" data-reveal>
+        <img src="{{ course.blob_path or '/static/placeholder.svg' }}" alt="" width="640" height="360" loading="lazy" decoding="async" data-cover>
+        <span class="featured-row-copy">
+          <span class="featured-row-title">{{ course.title }}</span>
+          <span class="featured-row-meta"><span class="featured-category">{{ course.category or 'Course' }}</span>{% if course.rate %}<span class="muted flex items-center gap-1">{{ icon('star', 13) }}{{ '%.1f'|format(course.rate) }}</span>{% endif %}{% if course.total_hour is not none %}<span class="muted">{{ '%g'|format(course.total_hour) }} hr</span>{% endif %}</span>
+          <span class="featured-instructor muted">{{ course.instructor or 'Instructor unavailable' }}</span>
+        </span>
+        <span class="featured-row-arrow" aria-hidden="true">{{ icon('arrow', 18) }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
 {% endif %}
-<section class="landing-outro"><h2>Learn today.<br>Build tomorrow.</h2><div><p>Find a course, check its coupon, and take your next step.</p><a href="/courses" class="outro-link">Browse courses {{ icon('arrow', 22) }}</a></div></section>
+
+<section class="landing-outro" aria-labelledby="outro-title">
+  <div class="outro-inner">
+    <div class="outro-copy" data-reveal>
+      <h2 id="outro-title">Learn more.<br>Go further.</h2>
+      <a class="outro-link" href="/courses">Browse free courses {{ icon('arrow', 22) }}</a>
+    </div>
+    <ol class="outro-steps" data-reveal>
+      <li><span class="step-icon">{{ icon('book', 20) }}</span><div class="step-copy"><h3>Pick a course</h3><p>Browse the newest free listings in a field you already care about.</p></div></li>
+      <li><span class="step-icon">{{ icon('ticket', 20) }}</span><div class="step-copy"><h3>Check the coupon</h3><p>Open the course and copy the coupon while it is still live.</p></div></li>
+      <li><span class="step-icon">{{ icon('arrow', 20) }}</span><div class="step-copy"><h3>Enroll on Udemy</h3><p>Use the coupon at checkout. No account needed here.</p></div></li>
+    </ol>
+  </div>
+</section>
 {% endblock %}

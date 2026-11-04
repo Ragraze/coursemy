@@ -8,8 +8,11 @@
     toastTimer = setTimeout(() => { element.hidden = true; }, 4500);
   };
 
+  const preparedCovers = new WeakSet();
   const prepare = (root = document) => {
     root.querySelectorAll('img[data-cover]').forEach((image) => {
+      if (preparedCovers.has(image)) return;
+      preparedCovers.add(image);
       image.addEventListener('error', () => {
         image.src = '/static/placeholder.svg';
       }, { once: true });
@@ -38,8 +41,7 @@
         const result = await response.json();
         if (!response.ok) throw new Error(result.detail || 'Catalog refresh failed.');
         toast('Catalog updated.');
-        if (window.htmx && document.querySelector('#filters')) window.htmx.trigger('#filters', 'submit');
-        else location.reload();
+        location.reload();
       } catch (error) { toast(error.message || 'Refresh failed. Please try again.'); }
       finally {
         refreshing = false;
@@ -108,7 +110,7 @@
       }
     }
   });
-  document.addEventListener('htmx:afterSwap', () => prepare());
+  document.addEventListener('htmx:afterSwap', (event) => prepare(event.detail.elt));
 
   // Native GET forms remain usable when the CDN is unavailable.
   if (!window.htmx) {

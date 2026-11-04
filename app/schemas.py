@@ -88,6 +88,7 @@ class StatsOut(Schema):
     total: int
     upstream_total: int
     active: int
+    courses: int
     practice_tests: int
     saved: int
     refreshed_at: str | None

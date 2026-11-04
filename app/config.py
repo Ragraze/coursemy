@@ -11,8 +11,8 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=ROOT / ".env", extra="ignore")
 
     app_name: str = "Coursemy"
-    upstream_api_base: HttpUrl = "https://courspora.my.id/api"
-    database_url: str = "sqlite:///./courspora.db"
+    upstream_api_base: HttpUrl
+    database_url: str = "sqlite:///./coursemy.db"
     blob_dir: Path = ROOT / "app/static/blobs"
     scheduler_enabled: bool = True
     initial_sync_enabled: bool = True

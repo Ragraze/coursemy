@@ -132,7 +132,7 @@ python3 -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-cp -n .env.example .env            # adjust values if needed
+cp -n .env.example .env            # set UPSTREAM_API_BASE to your source API
 alembic upgrade head               # create the schema
 python scripts/build_css.py        # build app/static/css/style.css
 uvicorn app.main:app --reload
@@ -164,8 +164,8 @@ Settings are read from environment variables or a local `.env` file (see `.env.e
 | Variable | Default | Description |
 | --- | --- | --- |
 | `APP_NAME` | `Coursemy` | Application name shown in templates and the API info endpoint. |
-| `UPSTREAM_API_BASE` | `https://courspora.my.id/api` | Base URL of the upstream catalog API. |
-| `DATABASE_URL` | `sqlite:///./courspora.db` | SQLAlchemy URL. Use `postgresql+psycopg://...` for PostgreSQL. |
+| `UPSTREAM_API_BASE` | required | Base URL of the upstream catalog API. Replace the example URL in `.env` with your source API. |
+| `DATABASE_URL` | `sqlite:///./coursemy.db` | SQLAlchemy URL. Use `postgresql+psycopg://...` for PostgreSQL. |
 | `BLOB_DIR` | `app/static/blobs` | Directory for downloaded course covers. Must be writable and persistent. |
 | `SCHEDULER_ENABLED` | `true` | Enables the embedded APScheduler job. Keep it enabled on **one** process only. |
 | `INITIAL_SYNC_ENABLED` | `true` | Runs a full catalog sync on first startup when none has completed before. |
@@ -180,7 +180,6 @@ The fixed list of 13 Udemy categories lives in `app/services/catalog.py`. Catego
 - **Scheduler** — with `SCHEDULER_ENABLED=true`, a full sync runs at minute `00` and `30` of every hour (`Asia/Jakarta`). A running sync is never stacked with the next scheduled run (`max_instances=1`, coalescing enabled).
 - **Manual, first page** — `POST /api/catalog/refresh` fetches the first page of courses and practice tests (up to 15 items per kind). No admin token is required.
 - **Manual, full catalog** — `POST /api/catalog/refresh?full=true` crawls every page and waits for completion. Increase your reverse-proxy timeout for large catalogs.
-- **Legacy alias** — `POST /api/catalog/refreshCourses` is deprecated but still works.
 - **Locking** — a database lease (`sync_lock`, 10 minutes) with a per-batch heartbeat prevents overlapping syncs. If a process dies, the lease expires and the next sync proceeds.
 - **Pagination safety** — a full sync aborts with an upstream error if the source repeats a page or stops before the reported total is reached.
 - **Failure behavior** — upstream failures are retried twice with exponential backoff. A failed refresh leaves the previously cached catalog intact and records the error in `catalog_meta`.
@@ -236,7 +235,6 @@ The API uses camelCase field aliases (for example `totalHour`, `isExpired`, `ima
 | Method | Path | Description |
 | --- | --- | --- |
 | `POST` | `/api/catalog/refresh` | Refresh the first page, or the full catalog with `?full=true`. |
-| `POST` | `/api/catalog/refreshCourses` | Deprecated alias of the refresh endpoint. |
 
 Status codes: `409` when a sync is already running, `429` when the refresh cooldown is active, `502` when the upstream is unreachable or returns an unexpected payload.
 
@@ -295,6 +293,8 @@ With PostgreSQL, use Compose. Add a strong `POSTGRES_PASSWORD` to `.env` first:
 docker compose up --build -d
 docker compose logs -f app
 ```
+
+Compose defaults to the `coursemy` database and role. Existing PostgreSQL volumes retain their initialized names; set `POSTGRES_DB` and `POSTGRES_USER` in `.env` to those existing values before upgrading.
 
 Compose starts PostgreSQL 17 plus a single Gunicorn worker, persists the database and covers in named volumes, waits for a healthy database, and exposes a health check against `/api/info`.
 

@@ -1,0 +1,3 @@
+.page-hero{isolation:isolate}
+.hero-dot-grid{position:absolute;inset:0;z-index:-1;width:100%;height:100%;pointer-events:none}
+.landing-hero .hero-dot-grid{top:calc(-1 * var(--hero-header-space));left:50%;width:100vw;height:calc(100% + var(--hero-header-space));transform:translateX(-50%)}

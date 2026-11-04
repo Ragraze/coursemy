@@ -1,16 +1,20 @@
-:root{--header-surface:rgb(251 249 250 / 72%);--header-text:#202027;--header-muted:#655d63;--header-line:rgb(101 93 99 / 24%);--header-active:rgb(166 45 96 / 10%)}
-:root[data-theme="dark"]{--ground:#181519;--surface:#242025;--raised:#2d272d;--border:#443b43;--control:#82737e;--text:#f5eff3;--muted:#c6b9c2;--accent:#d5558d;--accent-soft:#422337;--accent-ink:#ffb5d4;--header-surface:rgb(36 32 37 / 72%);--header-text:#f5eff3;--header-muted:#d0c4cc;--header-line:rgb(198 185 194 / 24%);--header-active:rgb(255 181 212 / 12%);color-scheme:dark}
+:root{--header-surface:rgb(253 251 249 / 90%);--header-text:#241f1b;--header-muted:#6a615a;--header-line:rgb(106 97 90 / 24%);--header-active:rgb(194 87 31 / 10%)}
+:root[data-theme="dark"]{--ground:#242220;--surface:#2d2a27;--raised:#36322e;--border:#49423b;--control:#85776b;--text:#ded7cf;--muted:#b9aea3;--accent:#c48a60;--accent-soft:#332b25;--accent-ink:#c79570;--header-surface:rgb(45 42 39 / 94%);--header-text:#ded7cf;--header-muted:#b9aea3;--header-line:rgb(185 174 163 / 24%);--header-active:rgb(196 138 96 / 10%);color-scheme:dark}
 .landing-page{--landing-paper:var(--ground);--landing-ink:var(--text);--landing-accent:var(--accent);--landing-pale:var(--accent-soft);--landing-muted:var(--muted)}
 .site-header{--header-surface:inherit;--header-text:inherit;--header-muted:inherit;margin-bottom:10px}
 .header-shell{background:var(--header-surface);border-color:var(--header-line);backdrop-filter:blur(24px) saturate(140%);-webkit-backdrop-filter:blur(24px) saturate(140%)}
 .site-header .nav-link:hover,.site-header .nav-link.is-active{background:var(--header-active);color:var(--header-text)}
-.site-header .wordmark span{font-size:11px}
 .theme-control{display:flex;align-items:center;flex-shrink:0;gap:2px;padding:3px;border-radius:999px;background:var(--header-active)}
 .theme-control button{width:36px;height:40px;padding:0;display:grid;place-items:center;color:var(--header-muted);border-radius:50%}
 .theme-control button:hover{color:var(--header-text)}
 .theme-control button[aria-pressed="true"]{background:var(--surface);color:var(--accent-ink)}
 .header-mobile-menu>summary{border-color:var(--header-line);color:var(--header-text)}
 .header-mobile-panel{background:var(--surface);border-color:var(--header-line)}
+.site-footer.site-footer{width:100%;background:var(--accent-soft);border-top:1px solid color-mix(in srgb,var(--accent) 35%,var(--border));padding-block:32px;font-size:13px;color:var(--text)}
+.footer-inner{gap:12px}
+.github-link{position:fixed;right:max(20px,env(safe-area-inset-right));bottom:max(20px,env(safe-area-inset-bottom));z-index:15;display:grid;place-items:center;width:48px;height:48px;border:1px solid #39312b;border-radius:50%;background:#241f1b;color:#fff}
+.github-link:hover{background:#39312b;color:#fff}
+.github-link:focus-visible{outline:3px solid var(--accent);outline-offset:4px}
 .landing-hero{padding-top:0}.courses-page .page-heading{padding-top:24px}
 .courses-page .page-heading h1{font-size:26px}
 .courses-page .course-tabs{gap:8px;overflow-x:auto;max-width:100%}
@@ -20,13 +24,21 @@
 @media(max-width:720px){.courses-page .page-heading h1{font-size:22px}}
 .mosaic-course img{transition:none}.mosaic-course:hover img{transform:none}
 .hero-search{background:var(--surface)}
-:root[data-theme="dark"] .mosaic-message,:root[data-theme="dark"] .landing-outro{background:#8e2853}
-:root[data-theme="dark"] .hero-search button,:root[data-theme="dark"] .btn-primary{background:#a62d60;border-color:#a62d60;color:white}
-:root[data-theme="dark"] .hero-search button:hover,:root[data-theme="dark"] .btn-primary:hover{background:#8e2853}
+:root[data-theme="dark"] .landing-page{--landing-solid:var(--accent-soft);--landing-solid-dark:var(--raised);--landing-band:#2b2724}
+:root[data-theme="dark"] .mosaic-message,:root[data-theme="dark"] .landing-outro{background:var(--accent-soft);color:var(--text)}
+:root[data-theme="dark"] .outro-copy h2{color:var(--accent-ink)}
+:root[data-theme="dark"] .step-copy h3{color:var(--text)}
+:root[data-theme="dark"] .step-copy p,:root[data-theme="dark"] .outro-copy p{color:var(--muted)}
+:root[data-theme="dark"] .step-icon{background:var(--raised);color:var(--accent-ink)}
+:root[data-theme="dark"] .outro-link{background:var(--surface);color:var(--accent-ink)}
+:root[data-theme="dark"] .outro-link:hover{background:var(--raised)}
+:root[data-theme="dark"] .hero-search button,:root[data-theme="dark"] .btn-primary{background:#65452f;border-color:#65452f;color:#e0d0c1}
+:root[data-theme="dark"] .hero-search button:hover,:root[data-theme="dark"] .btn-primary:hover{background:#715039;border-color:#715039}
+:root[data-theme="dark"] .page-hero,:root[data-theme="dark"] .landing-hero::before{background:radial-gradient(72% 130% at 6% -18%,color-mix(in srgb,var(--accent) 8%,var(--accent-soft)) 0%,transparent 66%),radial-gradient(58% 110% at 100% 4%,color-mix(in srgb,var(--accent) 4%,var(--accent-soft)) 0%,transparent 70%),linear-gradient(118deg,var(--accent-soft) 0%,color-mix(in srgb,var(--accent-soft) 88%,var(--accent)) 26%,color-mix(in srgb,var(--accent-soft) 52%,var(--ground)) 64%,var(--ground) 100%)}
 :root[data-theme="dark"] .prose-text,:root[data-theme="dark"] .detail-list{color:var(--muted)}
 :root[data-theme="dark"] .status-expired{background:var(--raised);color:var(--muted)}
 :root[data-theme="dark"] .coupon-box{border-color:var(--border)}
 :root[data-theme="dark"] .skeleton-cover,:root[data-theme="dark"] .skeleton-line{background:var(--raised)}
 :root[data-theme="dark"] .course-card:hover{border-color:var(--control)}
 @media(max-width:720px){.site-header{margin-bottom:8px}.header-shell{gap:8px}.site-header .wordmark{margin-right:auto}.theme-control button{width:32px;height:40px}.header-mobile-panel .nav-link{color:var(--header-text)}}
-@media(max-width:360px){.header-shell{padding-left:14px;gap:5px}.site-header .wordmark{font-size:20px}.theme-control{gap:0;padding:2px}.theme-control button{width:29px}}
+@media(max-width:360px){.header-shell{padding-left:14px;gap:5px}.site-header .wordmark{font-size:18px;gap:6px}.site-header .brand-logo{width:24px;height:24px}.theme-control{gap:0;padding:2px}.theme-control button{width:29px}}

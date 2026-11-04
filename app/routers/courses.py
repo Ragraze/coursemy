@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
+from starlette.concurrency import run_in_threadpool
 
 from app.config import get_settings
 from app.models import Course, SavedCourse
@@ -14,7 +15,7 @@ router = APIRouter(prefix="/api", tags=["Catalog"])
 async def course_list(db, upstream, params, visitor_id):
     if params["category"] and params["kind"] != "saved":
         await catalog.ensure_category(db, upstream, get_settings(), params["category"])
-    return catalog.query_courses(db, **params, visitor_id=visitor_id)
+    return await run_in_threadpool(catalog.query_courses, db, **params, visitor_id=visitor_id)
 
 
 @router.get("/courses", response_model=PaginatedCourses)
@@ -75,7 +76,7 @@ def related(slug_part: str, db: DB):
 
 @router.get("/courses/{slug_part}", response_model=CourseDetailOut)
 async def detail(slug_part: str, db: DB, upstream: Remote):
-    course = catalog.find_course(db, slug_part)
+    course = await run_in_threadpool(catalog.find_course, db, slug_part)
     if course is None:
         raise HTTPException(404, "Course not found in the local catalog.")
     return await catalog.ensure_detail(db, upstream, get_settings(), course)

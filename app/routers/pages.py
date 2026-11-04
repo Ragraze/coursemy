@@ -2,6 +2,7 @@ from urllib.parse import quote, urlencode
 
 from fastapi import APIRouter, Request
 from fastapi.templating import Jinja2Templates
+from starlette.concurrency import run_in_threadpool
 
 from app.config import ROOT, get_settings
 from app.routers.dependencies import DB, Filters, Remote
@@ -27,6 +28,10 @@ async def render_catalog(request, db, upstream, params):
             await catalog.ensure_category(db, upstream, get_settings(), params["category"])
         except (UpstreamError, catalog.SyncBusy) as exc:
             error = str(exc)
+    return await run_in_threadpool(_catalog_response, request, db, params, saved_only, error)
+
+
+def _catalog_response(request, db, params, saved_only, error):
     result = catalog.query_courses(db, **params, visitor_id=request.state.visitor_id, saved_only=saved_only)
     path = "/courses"
 
@@ -45,16 +50,9 @@ async def render_catalog(request, db, upstream, params):
 
 @router.get("/")
 def landing(request: Request, db: DB):
-    candidates = catalog.query_courses(db, hide_expired=True, kind="courses").courses
-    featured = []
-    instructors = set()
-    for course in candidates:
-        if course.instructor not in instructors:
-            featured.append(course)
-            instructors.add(course.instructor)
-        if len(featured) == 6:
-            break
-    return templates.TemplateResponse(request=request, name="landing.html", context=context(request, db, featured=featured), headers={"Cache-Control": "private, no-store"})
+    return templates.TemplateResponse(request=request, name="landing.html", context=context(
+        request, db, featured=catalog.landing_featured(db), category_counts=catalog.category_counts(db),
+    ), headers={"Cache-Control": "private, no-store"})
 
 
 @router.get("/courses")
@@ -64,14 +62,22 @@ async def index(request: Request, db: DB, upstream: Remote, params: Filters):
 
 @router.get("/course/{slug:path}")
 async def detail(slug: str, request: Request, db: DB, upstream: Remote):
-    course = catalog.find_course(db, slug)
+    course = await run_in_threadpool(catalog.find_course, db, slug)
     if course is None:
-        return templates.TemplateResponse(request=request, name="error.html", context=context(request, db, message="Course not found in the local catalog."), status_code=404)
+        return await run_in_threadpool(_missing_course_response, request, db)
     error = None
     try:
         course = await catalog.ensure_detail(db, upstream, get_settings(), course)
     except UpstreamError as exc:
         error = str(exc)
+    return await run_in_threadpool(_detail_response, request, db, course, error)
+
+
+def _missing_course_response(request, db):
+    return templates.TemplateResponse(request=request, name="error.html", context=context(request, db, message="Course not found in the local catalog."), status_code=404)
+
+
+def _detail_response(request, db, course, error):
     return templates.TemplateResponse(request=request, name="course_detail.html", context=context(
         request, db, course=course, related=catalog.related_courses(db, course), error=error,
         coupon_fresh=course.detail_fetched_at is not None and error is None,

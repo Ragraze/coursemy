@@ -1,0 +1,290 @@
+html {
+  overflow-x: clip;
+}
+
+.page-hero {
+  --text: var(--accent-ink);
+  --muted: var(--accent-ink);
+  color: var(--accent-ink);
+  position: relative;
+  width: 100vw;
+  margin-inline: calc(50% - 50vw);
+  background:
+    radial-gradient(72% 130% at 6% -18%, color-mix(in srgb, var(--accent) 20%, var(--accent-soft)) 0%, transparent 66%),
+    radial-gradient(58% 110% at 100% 4%, color-mix(in srgb, var(--accent) 8%, var(--accent-soft)) 0%, transparent 70%),
+    linear-gradient(118deg, var(--accent-soft) 0%, color-mix(in srgb, var(--accent-soft) 78%, var(--accent)) 26%, color-mix(in srgb, var(--accent-soft) 46%, var(--ground)) 64%, var(--ground) 100%);
+}
+
+.page-hero-inner {
+  width: min(1360px, calc(100% - 80px));
+  margin-inline: auto;
+}
+
+.courses-page .site-header,
+.course-page .site-header {
+  margin-top: var(--nav-top-gap);
+  margin-bottom: 0;
+}
+
+/* Extend the hero gradient behind the floating navbar on these pages. */
+.courses-page .page-hero,
+.course-page .page-hero {
+  margin-top: calc(-1 * (var(--header-height) + var(--nav-top-gap)));
+}
+
+.courses-page .catalog-hero {
+  padding-top: calc(clamp(36px, 5vw, 68px) + var(--header-height) + var(--nav-top-gap));
+}
+
+.course-page .course-hero {
+  padding-top: calc(clamp(28px, 4vw, 48px) + var(--header-height) + var(--nav-top-gap));
+}
+
+.catalog-hero {
+  padding-block: clamp(36px, 5vw, 68px) clamp(32px, 4vw, 54px);
+  border-bottom: 1px solid var(--border);
+}
+
+.catalog-hero-inner {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: clamp(32px, 6vw, 88px);
+}
+
+.catalog-hero-copy {
+  min-width: 0;
+}
+
+.catalog-hero-label {
+  margin-bottom: 10px;
+  color: var(--accent-ink);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.catalog-hero-title {
+  color: var(--accent-ink);
+  font-size: clamp(54px, 8.4vw, 118px);
+  font-weight: 700;
+  line-height: .92;
+  letter-spacing: -.058em;
+  text-wrap: initial;
+}
+
+.catalog-hero-note {
+  flex: 0 1 360px;
+  max-width: 360px;
+  padding-bottom: 6px;
+}
+
+.catalog-hero-note > p {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.catalog-hero-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 30px;
+  margin: 22px 0 0;
+  padding: 0;
+}
+
+.catalog-hero-stats div {
+  display: grid;
+  gap: 1px;
+}
+
+.catalog-hero-stats dt {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.catalog-hero-stats dd {
+  margin: 0;
+  color: var(--accent-ink);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.catalog-hero + #filters {
+  padding-top: clamp(24px, 3vw, 40px);
+}
+
+.course-hero {
+  padding-block: clamp(28px, 4vw, 48px);
+  border-bottom: 1px solid var(--border);
+}
+
+.course-hero-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr);
+  align-items: center;
+  gap: clamp(32px, 5vw, 72px);
+}
+
+.course-hero-copy {
+  min-width: 0;
+}
+
+.course-hero-back {
+  margin-bottom: clamp(28px, 4vw, 52px);
+}
+
+.course-hero-copy h1 {
+  max-width: 900px;
+  margin-top: 14px;
+  font-size: clamp(32px, 4.4vw, 58px);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -.04em;
+  overflow-wrap: anywhere;
+}
+
+.course-hero-instructor {
+  margin-top: 16px;
+  font-size: 15px;
+}
+
+.course-hero-meta {
+  margin-top: 20px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.course-hero-meta .status {
+  color: var(--accent-ink);
+}
+
+.course-hero-media {
+  position: relative;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.course-hero-media img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.course-hero-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--accent-ink);
+}
+
+.course-hero ~ .detail-layout {
+  margin-top: clamp(36px, 5vw, 64px);
+}
+
+.detail-main > .detail-section:first-child {
+  margin-top: 0;
+}
+
+.course-hero ~ .notice {
+  margin-top: clamp(24px, 3vw, 36px);
+}
+
+@media (max-width: 1100px) {
+  .page-hero-inner {
+    width: calc(100% - 48px);
+  }
+}
+
+@media (max-width: 900px) {
+  .catalog-hero-inner {
+    display: grid;
+    gap: 26px;
+  }
+
+  .catalog-hero-note {
+    flex: none;
+    max-width: 52ch;
+    padding-bottom: 0;
+  }
+
+  .course-hero-inner {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+  }
+
+  .course-hero-media {
+    order: 2;
+  }
+}
+
+@media (max-width: 720px) {
+  .courses-page .catalog-hero {
+    padding-top: calc(28px + var(--header-height) + var(--nav-top-gap));
+  }
+
+  .course-page .course-hero {
+    padding-top: calc(24px + var(--header-height) + var(--nav-top-gap));
+  }
+
+  .page-hero-inner {
+    width: calc(100% - 32px);
+  }
+
+  .catalog-hero {
+    padding-block: 28px 24px;
+  }
+
+  .catalog-hero-title {
+    font-size: clamp(44px, 12vw, 66px);
+  }
+
+  .catalog-hero-note > p {
+    font-size: 14px;
+  }
+
+  .catalog-hero-stats {
+    gap: 12px 24px;
+    margin-top: 18px;
+  }
+
+  .catalog-hero-stats dd {
+    font-size: 18px;
+  }
+
+  .course-hero {
+    padding-block: 24px;
+  }
+
+  .course-hero-back {
+    margin-bottom: 24px;
+  }
+
+  .course-hero-copy h1 {
+    font-size: clamp(30px, 8.4vw, 42px);
+    line-height: 1.12;
+  }
+
+  .course-hero-instructor {
+    margin-top: 12px;
+    font-size: 14px;
+  }
+
+  .course-hero-meta {
+    margin-top: 16px;
+    font-size: 12px;
+  }
+
+  .course-hero ~ .detail-layout {
+    margin-top: 34px;
+  }
+}

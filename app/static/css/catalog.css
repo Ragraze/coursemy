@@ -1,0 +1,24 @@
+
+.courses-page #filters{padding-top:0}
+:root{--catalog-outline:color-mix(in srgb,var(--accent) 20%,var(--border))}
+.course-card,.skeleton-card,.search-input,.sort-control select,.btn:not(.btn-primary),.page-button,.hero-search,.enroll-panel,.coupon-box,.course-hero-media,.landing-page .featured-lead,.landing-page .featured-row{border:1px solid var(--catalog-outline);border-radius:12px}
+.landing-page .featured-lead{overflow:hidden;background:var(--surface)}
+.landing-page .featured-lead-link{gap:0}
+.landing-page .featured-lead-cover{border-radius:0}
+.landing-page .featured-lead-copy{padding:20px}
+.landing-page .featured-list{gap:12px}
+.landing-page .featured-row{background:var(--surface)}
+.landing-page .featured-row:hover{background:var(--raised);border-color:var(--accent)}
+.courses-page .course-card,.courses-page .skeleton-card{border:1px solid var(--catalog-outline);border-radius:12px}
+.courses-page .course-card:hover{border-color:var(--accent)}
+.courses-page .category-disclosure{padding:14px;border:1px solid var(--catalog-outline);border-radius:12px;background:var(--surface)}
+.courses-page .filter-toolbar{padding:16px;margin-bottom:20px;border:1px solid var(--catalog-outline);border-radius:12px;background:var(--surface)}
+.courses-page .catalog-tabs-row{display:flex;align-items:center;gap:12px;overflow-x:auto;margin-bottom:22px}
+.courses-page .catalog-tabs-row .course-tabs{display:flex;align-items:center;gap:8px;flex:1 0 auto;min-width:0;max-width:none;overflow:visible;margin-bottom:0}
+.courses-page .catalog-tabs-row .refresh-open{flex-shrink:0;min-height:44px;margin:0 0 0 auto;white-space:nowrap}
+.courses-page .catalog-tabs-row .tab-choice>span,.courses-page .catalog-tabs-row .refresh-open{min-height:44px;padding:9px 14px;border:1px solid var(--catalog-outline);border-radius:12px;background:var(--surface);font-size:13px;font-weight:500;line-height:1.5}
+.courses-page .catalog-tabs-row .tab-choice input:checked+span,.courses-page .catalog-tabs-row .tab-choice:hover>span,.courses-page .catalog-tabs-row .refresh-open:hover{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-ink)}
+
+@media(max-width:720px){.courses-page .catalog-tabs-row{gap:8px;margin-bottom:16px}}
+
+@media(max-width:720px){.courses-page .catalog-tabs-row{overflow:visible}.courses-page .catalog-tabs-row .course-tabs{flex:1 1 100%;flex-wrap:wrap;max-width:100%}.courses-page .catalog-tabs-row .refresh-open{margin-left:auto}}
