@@ -45,7 +45,7 @@
   .refresh-open{margin-top:0}
   /* At 1440px: 1360 = 208 sidebar + 32 gap + 1120 content; 3 x 357.33 + 2 x 24 = 1120. */
   .catalog-layout{display:grid;grid-template-columns:208px minmax(0,1fr);gap:32px}
-  .category-sidebar{min-width:0;padding-top:4px}
+  .category-sidebar{min-width:0}
   .category-disclosure>summary{display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:600;list-style:none;margin-bottom:16px;pointer-events:none}
   .category-disclosure>summary::-webkit-details-marker{display:none}
   .category-disclosure>summary span{font-size:11px;font-weight:400}
